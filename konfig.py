@@ -1,8 +1,8 @@
 FPS = 60
-WINDOW_SIZE = (1280, 1000)
+WINDOW_SIZE = (1080, 720)
 BACKGROUND = (200, 100, 100)
-ROOT_COUNT = 8
-ROOT_SIZE = 90
+ROOT_COUNT = 5
+ROOT_SIZE = 70
 ROOT_SUBSCRIPT = True
 font_path = 'assets/fonts/ariblk.ttf'
 font_size = 22

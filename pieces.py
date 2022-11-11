@@ -1,6 +1,7 @@
 from konfig import *
 import pygame as pg
 
+
 class Piece(pg.sprite.Sprite):
 
     def __init__(self, root_size: int, color: str, root_name: str, file_postfix: str):
@@ -12,8 +13,10 @@ class Piece(pg.sprite.Sprite):
         self.root_name = root_name
 
     def move_to_root(self, root):
-        self.rect = root.rect.copy()
+        root_copy = root.rect.copy()
+        self.rect.center = root_copy.center
         self.root_name = root.root_name
+
 
 class King(Piece):
     def __init__(self, root_size: int, color: str, root: str):

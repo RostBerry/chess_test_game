@@ -18,6 +18,7 @@ class Chessboard:
         self.__all_roots = pg.sprite.Group()
         self.__all_pieces = pg.sprite.Group()
         self.__all_areas = pg.sprite.Group()
+        self.__all_inputboxes = pg.sprite.Group()
         self.__input_box = None
         self.__pressed_root = None
         self.__picked_piece = None
@@ -143,10 +144,11 @@ class Chessboard:
 
     def mouse_btn_down(self, button_type: int, pos: tuple):
         self.__pressed_root = self.__get_root(pos)
-        if self.__pressed_root != 'input_box':
+        if self.__pressed_root.root_name != 'input_box':
             self.__input_box.deactivate()
             if self.__pressed_root is not None:
-                self.__taken_piece = self.__get_piece_on_click(self.__pressed_root)
+                if button_type == 1:
+                    self.__taken_piece = self.__get_piece_on_click(self.__pressed_root)
             if self.__taken_piece is not None:
                 self.__taken_piece.rect.center = pos
                 self.__grand_update()
@@ -156,7 +158,7 @@ class Chessboard:
 
     def mouse_btn_up(self, button_type: int, pos: tuple):
         released_root = self.__get_root(pos)
-        if released_root is not None and released_root == self.__pressed_root:
+        if released_root is not None:
             if button_type == 3:
                 self.__mark_root(released_root)
             if button_type == 1:
@@ -166,7 +168,7 @@ class Chessboard:
                 self.__taken_piece = None
         self.__grand_update()
 
-    def keyboard_down(self, event):
+    def keyboard_btn_down(self, event):
         if self.__input_box.active and event.key in self.__func_keys:
             if event.key == pg.K_LCTRL:
                 pass
@@ -182,11 +184,10 @@ class Chessboard:
             self.__input_box.put_char(event.unicode)
         self.__grand_update()
 
-    def keyboard_up(self, event):
+    def keyboard_btn_up(self, event):
         if event.key == pg.K_LCTRL: self.__hotkey[pg.K_LCTRL] = False
         if event.key == pg.K_RCTRL: self.__hotkey[pg.K_RCTRL] = False
         if event.key == pg.K_v: self.__hotkey[pg.K_v] = False
-
 
     def __mark_root(self, root):
         if not root.mark:
@@ -241,7 +242,7 @@ class InputBox(pg.sprite.Sprite):
         pg.draw.rect(self.image, INPUT_FONT_COLOR, (0, 0, self.rect.width, self.rect.height), 2)
 
     def deactivate(self):
-        self.active = True
+        self.active = False
         pg.draw.rect(self.image, WHITE, (0, 0, self.rect.width, self.rect.height), 2)
 
     def put_char(self, char: str):
@@ -251,8 +252,9 @@ class InputBox(pg.sprite.Sprite):
     def __update_text(self):
         self.image.fill(BLACK)
         pg.draw.rect(self.image, INPUT_FONT_COLOR, (0, 0, self.rect.width, self.rect.height), 2)
-        fen_text = font.render(self.text, 1, INPUT_FONT_COLOR)
+        fen_text = font.render(self.text, True, INPUT_FONT_COLOR)
         self.image.blit(fen_text, (9, 9))
+
 
 class Root(pg.sprite.Sprite):
 

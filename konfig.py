@@ -1,11 +1,13 @@
 FPS = 60
-WINDOW_SIZE = (1080, 720)
+WINDOW_SIZE = (1280, 720)
 BACKGROUND = (200, 100, 100)
-ROOT_COUNT = 5
+ROOT_COUNT = 8
 ROOT_SIZE = 70
 ROOT_SUBSCRIPT = True
-font_path = 'assets/fonts/ariblk.ttf'
-font_size = 22
+FONT_CHESSBOARD_PATH = 'assets/fonts/arial_black.ttf'
+FONT_CHESSBOARD_SIZE = 22
+FONT_TEXT_PATH = 'assets/fonts/NotCourierSans.ttf'
+FONT_TEXT_SIZE = 18
 INPUT_FONT_COLOR = (50, 255, 50)
 INPUT_BOX_SIZE = 40
 IMG_PATH = 'assets/images/'

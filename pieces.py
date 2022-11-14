@@ -18,11 +18,12 @@ class Piece(pg.sprite.Sprite):
         root_copy = root.rect.copy()
         self.rect.center = root_copy.center
         self.root_name = root.root_name
-        if root.root_name != prev_root_name:
-            root.kept = True
-            self.is_moved = True
-        else:
-            self.is_moved = False
+        if not root.kept:
+            if root.root_name != prev_root_name:
+                root.kept = True
+                self.is_moved = True
+            else:
+                self.is_moved = False
 
 
 class King(Piece):

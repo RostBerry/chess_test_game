@@ -15,6 +15,8 @@ STATIC_IMG_PATH = 'static images/'
 OTHER_IMG_PATH = 'other images/'
 BACKGROUND_IMG = 'wood_planks.jpg'
 BOARD_BACKGROUND_IMG = 'black_root.jpg'
+MUSIC_PATH = 'assets/music/'
+BACKGROUND_MUSIC = 'back/kalinka_not_russian.mp3'
 
 PIECE_IMG_PATH = 'pieces/'
 letters = 'abcdefghijklmnopqrstuvwxyz'

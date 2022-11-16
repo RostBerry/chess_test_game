@@ -34,6 +34,7 @@ class Chessboard:
         self.__picked_piece = None
         self.__taken_piece = None
         self.__clicked = False
+        self.__picked = False
         self.__piece_selected = False
         # Dictionaries
         self.__func_keys = [pg.K_LCTRL, pg.K_RCTRL, pg.K_v, pg.K_RETURN, pg.K_BACKSPACE]
@@ -41,8 +42,15 @@ class Chessboard:
         # Initialization methods
         self.__prepare_screen()
         self.__draw_play_board()
-        self.__setup_board()
+        self.__setup_board_with_fen()
+        self.__prepare_music()
         self.__grand_update()
+
+    def __prepare_music(self):
+        """Creates a nice soundtrack"""
+        pg.mixer.music.load(MUSIC_PATH + BACKGROUND_MUSIC)
+        pg.mixer.music.set_volume(0.3)
+        pg.mixer.music.play(-1)
 
     def __prepare_screen(self):
         """Draws background"""
@@ -150,7 +158,7 @@ class Chessboard:
                 # Places the piece on the root
                 if piece.root_name == root.root_name:
                     piece.rect = root.rect.copy()
-                    root.kept = True
+                    root.kept = False
 
     def __create_piece(self, piece_sym: str, board_data_coord: tuple):
         """Creates a single piece"""
@@ -183,12 +191,18 @@ class Chessboard:
                 return piece
         return None
 
+    def __fits_in_border(self, piece, pos):
+        """Checks if the mouse isn't outside the borders"""
+        if self.__clipped_area.collidepoint(pos[0] + piece.rect.width // 2,
+                                            pos[1] + piece.rect.height // 2):
+            return True
+        return False
+
     def drag(self, pos: tuple):
         """Works when the mouse is moving"""
         if self.__taken_piece is not None:
             # Checks if the piece isn't moving outside the clipped area and moves it
-            if self.__clipped_area.collidepoint(pos[0] + self.__taken_piece.rect.width // 2,
-                                                pos[1] + self.__taken_piece.rect.height // 2):
+            if self.__fits_in_border(self.__taken_piece, pos):
                 self.__taken_piece.rect.center = pos
             else:
                 self.__clicked = False  # Statement needed to correct root selection
@@ -209,10 +223,12 @@ class Chessboard:
             if button_type == 1:  # LMB
                 if not self.__piece_selected:
                     self.__taken_piece = self.__get_piece_on_click(self.__pressed_root)
+                else:
+                    if self.__picked_piece.root_name == self.__pressed_root.root_name:
+                        self.__taken_piece = self.__get_piece_on_click(self.__pressed_root)
             if self.__taken_piece is not None:
                 # Checking if the piece wouldn't move outside the clipped area
-                if self.__clipped_area.collidepoint(pos[0] + self.__taken_piece.rect.width // 2,
-                                                    pos[1] + self.__taken_piece.rect.height // 2):
+                if self.__fits_in_border(self.__taken_piece, pos):
                     self.__taken_piece.rect.center = pos
                 else:
                     self.__picked_piece = None
@@ -229,9 +245,7 @@ class Chessboard:
             if button_type == 3:  # RMB
                 self.__mark_root(self.__released_root)
             if button_type == 1:  # LMB
-                if self.__clicked:
-                    self.__pick_root(self.__released_root)
-
+                self.__pick_root(self.__released_root)
             if self.__taken_piece is not None:
                 self.__pressed_root.kept = False
                 if not self.__released_root.kept:
@@ -282,6 +296,8 @@ class Chessboard:
     def __setup_board_with_fen(self):
         """Decodes the user's input and setups new board konfig"""
         empty_roots = 0
+        if self.__input_box.text == '':
+            self.__input_box.text = 'rrrrrrrr/pppppppp/8/8/8/8/PPPPPPPP/BBBBBBBB'
         piece_map = self.__input_box.text.split('/')
         for i in range(len(self.__board_data)):
             index = 0
@@ -325,15 +341,17 @@ class Chessboard:
         if self.__picked_piece is None:
             if not root.kept:
                 piece = self.__get_piece_on_click(root)
-                if piece is not None:
+                if piece is not None and not self.__picked:
                     self.__select_root(root)
                     self.__picked_piece = piece
+                    self.__picked = True
         else:
             if not root.kept:
                 self.__picked_piece.move_to_root(root)
                 if self.__picked_piece.is_moved:
                     self.__un_select_all_roots()
                     self.__picked_piece = None
+                    self.__picked = False
 
     def __un_mark_all_marks(self):
         """Removes all marks from roots"""

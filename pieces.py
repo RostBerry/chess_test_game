@@ -16,14 +16,13 @@ class Piece(pg.sprite.Sprite):
 
     def move_to_root(self, root):
         """Moves the piece to the root"""
-        prev_root_name = self.root_name
         root_copy = root.rect.copy()
         self.rect.center = root_copy.center
-        self.root_name = root.root_name
         if not root.kept:
-            if root.root_name != prev_root_name:
-                root.kept = True
+            if self.root_name != root.root_name:
+                root.kept = False
                 self.is_moved = True
+                self.root_name = root.root_name
             else:
                 self.is_moved = False
 

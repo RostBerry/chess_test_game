@@ -4,22 +4,21 @@ import pygame as pg
 import board_data
 from konfig import *
 
-# useless stuff
-pg.init()
-chessboard_font = pg.font.Font(FONT_CHESSBOARD_PATH, FONT_CHESSBOARD_SIZE)
-text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
-
 
 class Chessboard:
     """Main chessboard class"""
 
     def __init__(self, parent_surface: pg.Surface, root_count: int = ROOT_COUNT, root_size: int = ROOT_SIZE):
-        # Defining constants from the konfig
+        # Defining constants from the konfig or __init__ params
         self.__screen = parent_surface
         self.__count = root_count
         self.__board_data = board_data.board
         self.__size = root_size
         self.__pieces = PIECES_DICT
+        self.__input_box_font_size = FONT_TEXT_SIZE
+        self.__chessboard_font_size = FONT_CHESSBOARD_SIZE
+        self.__chessboard_font = pg.font.Font(FONT_CHESSBOARD_PATH, self.__chessboard_font_size)
+        self.__text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
         # Defining sprite groups
         self.__all_roots = pg.sprite.Group()
         self.__all_pieces = pg.sprite.Group()
@@ -27,15 +26,17 @@ class Chessboard:
         self.__all_input_boxes = pg.sprite.Group()
         self.__all_marks = pg.sprite.Group()
         # Defining interactive objects or variables
+        self.roots_dict = {}
+        self.__root_counter = 0
         self.__input_box = None
         self.__pressed_input_box = None
         self.__pressed_root = None
         self.__released_root = None
-        self.__picked_piece = None
+        self.__selected_piece = None
         self.__taken_piece = None
         self.__clicked = False
-        self.__picked = False
-        self.__piece_selected = False
+        self.__can_drag = False
+        self.__turn = None
         # Dictionaries
         self.__func_keys = [pg.K_LCTRL, pg.K_RCTRL, pg.K_v, pg.K_RETURN, pg.K_BACKSPACE]
         self.__hotkey = {pg.K_LCTRL: False, pg.K_RCTRL: False, pg.K_v: False}
@@ -90,7 +91,9 @@ class Chessboard:
             play_board_rect.y + num_fields_depth,)
         self.__apply_offset_for_roots(roots_coord_offset)
         # Creates the border for the mouse (will be needed later)
-        self.__clipped_area = pg.rect.Rect(roots_coord_offset, (total_width, total_width))
+        self.__clipped_area = pg.rect.Rect(roots_coord_offset,
+                                           (total_width,
+                                            total_width))
 
         # Draws the input box below the board
         self.__draw_input_box(play_board_rect)
@@ -106,8 +109,8 @@ class Chessboard:
         rows = pg.Surface((self.__size // 2, self.__count * self.__size), pg.SRCALPHA).convert_alpha()
         # Numerates the lines and rows
         for i in range(0, self.__count):
-            letter = chessboard_font.render(letters[i].upper(), True, LETTERS_COLOR)
-            number = chessboard_font.render(str(self.__count - i), True, NUMBERS_COLOR)
+            letter = self.__chessboard_font.render(letters[i].upper(), True, LETTERS_COLOR)
+            number = self.__chessboard_font.render(str(self.__count - i), True, NUMBERS_COLOR)
             # Puts a letter to the line
             lines.blit(letter, (
                 i * self.__size + (self.__size - letter.get_rect().width) // 2,
@@ -130,10 +133,13 @@ class Chessboard:
         # Creates the roots and adds them to the sprite group
         for y in range(self.__count):
             for x in range(self.__count):
+                root_name = letters[x] + str(self.__count - y)
+                self.__root_counter += 1
+                self.roots_dict[root_name] = self.__root_counter
                 root = Root(root_color_order,
                             self.__size,
                             (x, y),
-                            letters[x] + str(self.__count - y))
+                            root_name)
                 root_group.add(root)
                 root_color_order ^= True  # Changing the root color
             root_color_order = root_color_order ^ True if is_even_count else root_color_order
@@ -146,9 +152,9 @@ class Chessboard:
             root.rect.y += offset[1]
 
     def __setup_board(self):
-        """Draws the pieces on the roots from board_data or user's input"""
-        for j, row in enumerate(self.__board_data):
-            for i, root_value in enumerate(row):
+        """Draws the pieces on the roots from board_data"""
+        for j in range(len(self.__board_data)):
+            for i, root_value in enumerate(self.__board_data[j]):
                 if root_value != 0:
                     # Creating a piece based on board_data and adding it to the group
                     piece = self.__create_piece(root_value, (j, i))
@@ -158,7 +164,75 @@ class Chessboard:
                 # Places the piece on the root
                 if piece.root_name == root.root_name:
                     piece.rect = root.rect.copy()
-                    root.kept = False
+
+    def __setup_board_with_fen(self):
+        """Decodes the Forsyth Edwards Notation and setups new board konfig"""
+        # Separating the fen string to pieces placement and additional info
+        pieces_and_other_map = self.__input_box.text.split(' ')
+        self.__pieces_map = pieces_and_other_map[0].split('/')
+        self.__other_map = pieces_and_other_map[1:]
+        # Replacing the board data with new pieces placement
+        for row in range(len(self.__board_data)):  # Running through board data rows
+            value = 0
+            piece_map_offset = 0
+            while value < len(self.__board_data[row]):  # Running through board data values in rows
+                offset = 0
+                try:
+                    for i in range(int(self.__pieces_map[row][value - piece_map_offset])):  # Placing the empty
+                        self.__board_data[row][value + i] = 0                              # roots if those have
+                        offset = i                                                        # been found
+                    value += offset
+                    piece_map_offset += offset
+                except ValueError:  # Placing regular piece if the value in pieces map isn't an integer
+                    self.__board_data[row][value] = self.__pieces_map[row][value - piece_map_offset]
+                value += 1
+
+        # Saving additional info
+        self.__turn = self.__other_map[0]
+        print("White's turn" if self.__other_map[0] == 'w' else "Black's turn")
+        colors = {'whites': ('KQ', 'K', 'Q'), 'blacks': ('kq', 'k', 'q')}
+        for i in colors:  # What castlings can be done
+            print(f'Both castlings possible for {i}' if colors[i][0] in self.__other_map[1]
+                  else f'Short castling for {i}' if colors[i][1] in self.__other_map[1]
+                  else f'Long castling for {i}' if colors[i][2] in self.__other_map[1]
+                  else f'No possible castlings for {i}')
+        print('The last pawn move is: {}'.format('None' if '-' in self.__other_map[2] else self.__other_map[2]))
+
+        print(f'Halfmoves done: {self.__other_map[3]}')
+
+        endings = {'1': 'st', '2': 'nd', '3': 'rd'}
+        print(  # What move is it
+            f'{self.__other_map[4]}{endings[self.__other_map[4]] if self.__other_map[4] in endings else "th"} move '
+        )
+
+        self.__all_pieces.empty()
+        self.__setup_board()
+        self.__grand_update()
+
+    def __write_fen_from_board(self):
+        """Converts board data to a fen string"""
+        fen_string = ''
+        for row in range(len(self.__board_data)):
+            value = 0
+            empty_int = 0
+            while value < len(self.__board_data[row]):
+                if self.__board_data[row][value] == 0:
+                    empty_int += 1
+                else:
+                    if empty_int > 0:
+                        fen_string += str(empty_int)
+                        empty_int = 0
+                    fen_string += self.__board_data[row][value]
+                value += 1
+            if empty_int > 0:
+                fen_string += str(empty_int)
+            fen_string += '/' if self.__board_data[row] != self.__board_data[-1] else ''
+
+        for info in self.__other_map:
+            fen_string += ' ' + info
+
+        self.__input_box.text = fen_string  # Putting the fen string to the input bar
+        self.__input_box.put_char('')  # Updating the text
 
     def __create_piece(self, piece_sym: str, board_data_coord: tuple):
         """Creates a single piece"""
@@ -188,13 +262,17 @@ class Chessboard:
         """Returns the clicked piece"""
         for piece in self.__all_pieces:
             if piece.root_name == root.root_name:
-                return piece
+                print('Piece color:', piece.color, 'Turn:', self.__turn)
+                if piece.color == self.__turn:
+                    return piece
         return None
 
     def __fits_in_border(self, piece, pos):
         """Checks if the mouse isn't outside the borders"""
-        if self.__clipped_area.collidepoint(pos[0] + piece.rect.width // 2,
-                                            pos[1] + piece.rect.height // 2):
+        if (self.__clipped_area.collidepoint(pos[0] - piece.rect.width // 4,
+                                             pos[1] - piece.rect.height // 2)
+            and self.__clipped_area.collidepoint(pos[0] + piece.rect.width // 4,
+                                                 pos[1] + piece.rect.height // 2)):
             return True
         return False
 
@@ -206,10 +284,15 @@ class Chessboard:
                 self.__taken_piece.rect.center = pos
             else:
                 self.__clicked = False  # Statement needed to correct root selection
-                self.__taken_piece.move_to_root(self.__pressed_root)
-                self.__taken_piece = None
-                self.__pick_root(self.__pressed_root)
-            self.__grand_update()
+                self.__move_or_select_piece(self.__pressed_root)
+        elif self.__selected_piece is not None:
+            if self.__can_drag:
+                if self.__fits_in_border(self.__selected_piece, pos):
+                    self.__selected_piece.rect.center = pos
+                else:
+                    self.__clicked = False  # Statement needed to correct root selection
+                    self.__move_or_select_piece(self.__pressed_root)
+        self.__grand_update()
 
     def mouse_btn_down(self, button_type: int, pos: tuple):
         """Works when the mouse btn is clicked"""
@@ -221,19 +304,20 @@ class Chessboard:
         if self.__pressed_root is not None:
             self.__input_box.deactivate()
             if button_type == 1:  # LMB
-                if not self.__piece_selected:
-                    self.__taken_piece = self.__get_piece_on_click(self.__pressed_root)
-                else:
-                    if self.__picked_piece.root_name == self.__pressed_root.root_name:
-                        self.__taken_piece = self.__get_piece_on_click(self.__pressed_root)
+                self.__taken_piece = self.__get_piece_on_click(self.__pressed_root)
             if self.__taken_piece is not None:
+                self.__taken_piece.check_movables(self.roots_dict)
+                print(self.__taken_piece.movable_roots)
                 # Checking if the piece wouldn't move outside the clipped area
                 if self.__fits_in_border(self.__taken_piece, pos):
                     self.__taken_piece.rect.center = pos
                 else:
-                    self.__picked_piece = None
-                    self.__taken_piece = None
-                self.__grand_update()
+                    pass
+            elif self.__selected_piece is not None:
+                if self.__fits_in_border(self.__selected_piece, pos):
+                    self.__selected_piece.rect.center = pos
+                    self.__can_drag = True
+            self.__grand_update()
         # User clicked on the input box
         elif self.__pressed_input_box is not None:
             self.__input_box.activate()
@@ -245,14 +329,11 @@ class Chessboard:
             if button_type == 3:  # RMB
                 self.__mark_root(self.__released_root)
             if button_type == 1:  # LMB
-                self.__pick_root(self.__released_root)
+                self.__can_drag = False
+                if self.__clicked:
+                    self.__move_or_select_piece(self.__released_root)
             if self.__taken_piece is not None:
-                self.__pressed_root.kept = False
-                if not self.__released_root.kept:
-                    self.__taken_piece.move_to_root(self.__released_root)
-                else:
-                    self.__taken_piece.move_to_root(self.__pressed_root)
-                self.__taken_piece = None
+                pass
         self.__clicked = False
         self.__grand_update()
 
@@ -293,30 +374,6 @@ class Chessboard:
         if event.key == pg.K_v:
             self.__hotkey[pg.K_v] = False
 
-    def __setup_board_with_fen(self):
-        """Decodes the user's input and setups new board konfig"""
-        empty_roots = 0
-        if self.__input_box.text == '':
-            self.__input_box.text = 'rrrrrrrr/pppppppp/8/8/8/8/PPPPPPPP/BBBBBBBB'
-        piece_map = self.__input_box.text.split('/')
-        for i in range(len(self.__board_data)):
-            index = 0
-            for j in range(len(self.__board_data[i])):
-                if empty_roots == 0:
-                    try:
-                        empty_roots = int(piece_map[i][index])
-                        self.__board_data[i][j] = 0
-                        empty_roots -= 1
-                    except ValueError:
-                        self.__board_data[i][j] = piece_map[i][index]
-                        index += 1
-                else:
-                    self.__board_data[i][j] = 0
-                    empty_roots -= 1
-        self.__all_pieces.empty()
-        self.__setup_board()
-        self.__grand_update()
-
     def __mark_root(self, root):
         """Draws a green circle on the clicked root"""
         if not root.mark:
@@ -332,36 +389,48 @@ class Chessboard:
     def __select_root(self, root):
         """Selects the root and colors it to the transparent green"""
         select = Select(root)
-        self.__piece_selected = True
         self.__all_selects.add(select)
 
-    def __pick_root(self, root):
-        """Works when the left mouse btn is clicked, unmarks all the marks and selects or moves the piece"""
-        self.__un_mark_all_marks()
-        if self.__picked_piece is None:
-            if not root.kept:
-                piece = self.__get_piece_on_click(root)
-                if piece is not None and not self.__picked:
-                    self.__select_root(root)
-                    self.__picked_piece = piece
-                    self.__picked = True
-        else:
-            if not root.kept:
-                self.__picked_piece.move_to_root(root)
-                if self.__picked_piece.is_moved:
-                    self.__un_select_all_roots()
-                    self.__picked_piece = None
-                    self.__picked = False
+    def __move_or_select_piece(self, root):
+        self.__unselect_all_roots()
+        if self.__taken_piece is not None:
+            self.__taken_piece.move_to_root(root)
+            if self.__taken_piece.is_moved:
+                self.__change_turn()
+                self.__write_to_board_data(self.__taken_piece)
+            else:
+                self.__select_root(root)
+                self.__selected_piece = self.__taken_piece
+            self.__taken_piece = None
+        elif self.__selected_piece is not None:
+            self.__selected_piece.move_to_root(root)
+            if self.__selected_piece.is_moved:
+                self.__change_turn()
+                self.__write_to_board_data(self.__selected_piece)
+            self.__selected_piece = None
 
-    def __un_mark_all_marks(self):
+    def __write_to_board_data(self, piece):
+        value = letters.find(piece.root_name[0])
+        row = self.__count - int(piece.root_name[1])
+        prev_value = letters.find(piece.prev_root_name[0])
+        prev_row = self.__count - int(piece.prev_root_name[1])
+        self.__board_data[prev_row][prev_value] = 0
+        self.__board_data[row][value] = piece.piece_name
+
+        self.__write_fen_from_board()
+
+    def __change_turn(self):
+        self.__turn = 'w' if self.__turn == 'b' else 'b'
+        self.__other_map[0] = self.__turn
+
+    def __unmark_all_marks(self):
         """Removes all marks from roots"""
         self.__all_marks.empty()
         for root in self.__all_roots:
             root.mark = False
 
-    def __un_select_all_roots(self):
+    def __unselect_all_roots(self):
         """Removes all selects from roots"""
-        self.__piece_selected = False
         self.__all_selects.empty()
 
     def __grand_update(self):
@@ -380,13 +449,15 @@ class InputBox(pg.sprite.Sprite):
         super().__init__()
         x, y = board_rect.x, board_rect.y
         width, height = board_rect.width, board_rect.height
-        self.root_name = 'input_box'
-        self.text = ''
+        self.input_box_font_size = FONT_INPUT_BOX_SIZE
+        self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_size)
+        self.text = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+        self.__fen_text = None
         self.active = False
         self.image = pg.Surface((width, INPUT_BOX_SIZE)).convert_alpha()
         self.image.fill(BLACK)
-        pg.draw.rect(self.image, WHITE, (0, 0, width, INPUT_BOX_SIZE), 2)
         self.rect = pg.Rect(x, 2 * y + height, width, INPUT_BOX_SIZE)
+        self.__update_text()
 
     def activate(self):
         """Activates the input box"""
@@ -409,11 +480,22 @@ class InputBox(pg.sprite.Sprite):
         self.__update_text()
 
     def __update_text(self):
-        """Updates the input box every time any changes have been made"""
+        """Updates the input box if any changes have been made"""
         self.image.fill(BLACK)
-        pg.draw.rect(self.image, INPUT_FONT_COLOR, (0, 0, self.rect.width, self.rect.height), 2)
-        fen_text = text_font.render(self.text, True, INPUT_FONT_COLOR)
-        self.image.blit(fen_text, (9, 9))
+        pg.draw.rect(self.image,
+                     INPUT_FONT_COLOR if self.active else WHITE,
+                     (0, 0, self.rect.width, self.rect.height), 2)
+        self.__fen_text = self.input_box_font.render(self.text, True, INPUT_FONT_COLOR)
+        self.__adapt_text()
+        self.image.blit(self.__fen_text, (9, 9))
+
+    def __adapt_text(self):
+        print(self.__fen_text.get_rect().width, self.rect.width)
+        if (self.__fen_text.get_rect().width + 14 > self.rect.width or
+                self.__fen_text.get_rect().height + 14 > self.rect.height):
+            self.input_box_font_size -= 1
+            self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_size)
+            self.__fen_text = self.input_box_font.render(self.text, True, INPUT_FONT_COLOR)
 
 
 class Root(pg.sprite.Sprite):
@@ -428,7 +510,6 @@ class Root(pg.sprite.Sprite):
         self.image = pg.transform.scale(self.image, (size, size))
         self.rect = pg.Rect(x * size, y * size, size, size)
         self.mark = False
-        self.kept = False
 
 
 class Mark(pg.sprite.Sprite):

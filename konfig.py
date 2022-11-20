@@ -2,12 +2,13 @@ FPS = 60
 WINDOW_SIZE = (1280, 720)
 BACKGROUND = (200, 100, 100)
 ROOT_COUNT = 8
-ROOT_SIZE = 60
+ROOT_SIZE = 70
 ROOT_SUBSCRIPT = True
 FONT_CHESSBOARD_PATH = 'assets/fonts/arial_black.ttf'
 FONT_CHESSBOARD_SIZE = 22
 FONT_TEXT_PATH = 'assets/fonts/NotCourierSans.ttf'
 FONT_TEXT_SIZE = 18
+FONT_INPUT_BOX_SIZE = 18
 INPUT_FONT_COLOR = (50, 255, 50)
 INPUT_BOX_SIZE = 40
 IMG_PATH = 'assets/images/'
@@ -36,3 +37,5 @@ PIECES_DICT = {
     'N': ("Knight", "w"), 'n': ("Knight", "b"),
     'P': ("Pawn", "w"), 'p': ("Pawn", "b"),
 }
+HOST = '192.168.1.85'
+PORT = 14

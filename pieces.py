@@ -14,8 +14,8 @@ class Piece(pg.sprite.Sprite):
         self.prev_root_name = None
         self.root_name = root_name
         self.is_moved = False
-        self.movable_roots_r = [-8, -1, 0, 1, 8]
-        self.movable_roots_b = [-9, -7, 0, 7, 9]
+        self.movable_roots_r = [-8, -1, 1, 8]
+        self.movable_roots_b = [-9, -7, 7, 9]
         self.movable_roots = []
 
     def move_to_root(self, root):
@@ -110,11 +110,18 @@ class Knight(Piece):
     def __init__(self, root_size: int, color: str, root: str):
         super().__init__(root_size, color, root, '_knight.png')
         self.piece_name = 'N' if color == 'w' else 'n'
-        self.movable_roots_n = [-17, -15, -10, -6, 0, 6, 10, 15, 17]
+        self.movable_roots_n = [-17, -15, -10, -6, 6, 10, 15, 17]
 
     def check_movables(self, roots_dict: dict):
         for pos in self.movable_roots_n:
             if roots_dict[self.root_name] + pos in roots_dict.values():
+                if pos in [-6, 6]:
+                    roots_dict_keys = list(roots_dict.keys())
+                    roots_dict_values = list(roots_dict.values())
+                    if (roots_dict_keys[roots_dict_values.index(roots_dict[self.root_name] + pos)][1]
+                            != self.root_name[1]):
+                        self.movable_roots.append(pos)
+                    continue
                 self.movable_roots.append(pos)
 
 

@@ -139,7 +139,7 @@ class Chessboard:
                 root = Root(root_color_order,
                             self.__size,
                             (x, y),
-                            root_name)
+                            root_name, self.__root_counter)
                 root_group.add(root)
                 root_color_order ^= True  # Changing the root color
             root_color_order = root_color_order ^ True if is_even_count else root_color_order
@@ -308,6 +308,7 @@ class Chessboard:
             if self.__taken_piece is not None:
                 self.__taken_piece.check_movables(self.roots_dict)
                 print(self.__taken_piece.movable_roots)
+                self.__draw_available_roots(self.__taken_piece)
                 # Checking if the piece wouldn't move outside the clipped area
                 if self.__fits_in_border(self.__taken_piece, pos):
                     self.__taken_piece.rect.center = pos
@@ -377,7 +378,7 @@ class Chessboard:
     def __mark_root(self, root):
         """Draws a green circle on the clicked root"""
         if not root.mark:
-            mark = Mark(root)
+            mark = Mark(root, 'mark')
             self.__all_marks.add(mark)
         else:
             for mark in self.__all_marks:
@@ -391,13 +392,19 @@ class Chessboard:
         select = Select(root)
         self.__all_selects.add(select)
 
+    def __draw_available_roots(self, piece):
+        for movable_root in piece.movable_roots:
+            for root in self.__all_roots:
+                if root.counter == self.roots_dict[piece.root_name] + movable_root:
+                    available_root = Mark(root, 'available')
+                    self.__all_marks.add(available_root)
+
     def __move_or_select_piece(self, root):
         self.__unselect_all_roots()
         if self.__taken_piece is not None:
             self.__taken_piece.move_to_root(root)
             if self.__taken_piece.is_moved:
-                self.__change_turn()
-                self.__write_to_board_data(self.__taken_piece)
+                self.__after_move_preps(self.__taken_piece)
             else:
                 self.__select_root(root)
                 self.__selected_piece = self.__taken_piece
@@ -405,8 +412,7 @@ class Chessboard:
         elif self.__selected_piece is not None:
             self.__selected_piece.move_to_root(root)
             if self.__selected_piece.is_moved:
-                self.__change_turn()
-                self.__write_to_board_data(self.__selected_piece)
+                self.__after_move_preps(self.__selected_piece)
             self.__selected_piece = None
 
     def __write_to_board_data(self, piece):
@@ -418,6 +424,11 @@ class Chessboard:
         self.__board_data[row][value] = piece.piece_name
 
         self.__write_fen_from_board()
+
+    def __after_move_preps(self, piece):
+        self.__unmark_all_marks()
+        self.__change_turn()
+        self.__write_to_board_data(piece)
 
     def __change_turn(self):
         self.__turn = 'w' if self.__turn == 'b' else 'b'
@@ -501,11 +512,12 @@ class InputBox(pg.sprite.Sprite):
 class Root(pg.sprite.Sprite):
     """Root main class"""
 
-    def __init__(self, color_order: int, size: int, coordinates: tuple, name: str):
+    def __init__(self, color_order: int, size: int, coordinates: tuple, name: str, counter):
         super().__init__()
         x, y = coordinates
         self.color = ROOT_COLORS[color_order]
         self.root_name = name
+        self.counter = counter
         self.image = pg.image.load(IMG_PATH + self.color)
         self.image = pg.transform.scale(self.image, (size, size))
         self.rect = pg.Rect(x * size, y * size, size, size)
@@ -515,9 +527,11 @@ class Root(pg.sprite.Sprite):
 class Mark(pg.sprite.Sprite):
     """Root mark class"""
 
-    def __init__(self, root: Root):
+    def __init__(self, root: Root, mark_type):
         super().__init__()
-        picture = pg.image.load(IMG_PATH + OTHER_IMG_PATH + 'mark.png').convert_alpha()
+        picture = (pg.image.load(IMG_PATH + OTHER_IMG_PATH + 'mark.png').convert_alpha()
+                   if mark_type == 'mark' else
+                   pg.image.load(IMG_PATH + OTHER_IMG_PATH + 'available.png').convert_alpha())
         self.image = pg.transform.scale(picture, (ROOT_SIZE, ROOT_SIZE))
         self.rect = pg.Rect((root.rect.x, root.rect.y), (ROOT_SIZE, ROOT_SIZE))
         self.root_name = root.root_name

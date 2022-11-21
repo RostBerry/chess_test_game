@@ -263,8 +263,12 @@ class Chessboard:
         for piece in self.__all_pieces:
             if piece.root_name == root.root_name:
                 print('Piece color:', piece.color, 'Turn:', self.__turn)
-                if piece.color == self.__turn:
-                    return piece
+                if piece.color == self.__turn and self.__selected_piece is None:
+                    if self.__taken_piece is None:
+                        return piece
+                    else:
+                        self.__taken_piece.move_to_root(self.__pressed_root)
+                        return piece
         return None
 
     def __fits_in_border(self, piece, pos):
@@ -298,7 +302,7 @@ class Chessboard:
         """Works when the mouse btn is clicked"""
         self.__clicked = True  # Statement needed to correct root selection
         # Checking if the user clicked on root or input box
-        self.__pressed_root = self.__get_root(pos)
+        self.__pressed_root = self.__get_root(pos) if self.__selected_piece is None else self.__pressed_root
         self.__pressed_input_box = self.__get_input_box(pos)
         # User clicked on the root
         if self.__pressed_root is not None:
@@ -306,6 +310,8 @@ class Chessboard:
             if button_type == 1:  # LMB
                 self.__taken_piece = self.__get_piece_on_click(self.__pressed_root)
             if self.__taken_piece is not None:
+                self.__select_root(self.__pressed_root)
+                self.__pressed_root.is_selected ^= True
                 self.__taken_piece.check_movables(self.roots_dict)
                 print(self.__taken_piece.movable_roots)
                 self.__draw_available_roots(self.__taken_piece)
@@ -407,9 +413,11 @@ class Chessboard:
                 self.__after_move_preps(self.__taken_piece)
             else:
                 self.__select_root(root)
+                root.is_selected ^= True
                 self.__selected_piece = self.__taken_piece
             self.__taken_piece = None
         elif self.__selected_piece is not None:
+            self.__unmark_all_marks()
             self.__selected_piece.move_to_root(root)
             if self.__selected_piece.is_moved:
                 self.__after_move_preps(self.__selected_piece)
@@ -522,6 +530,7 @@ class Root(pg.sprite.Sprite):
         self.image = pg.transform.scale(self.image, (size, size))
         self.rect = pg.Rect(x * size, y * size, size, size)
         self.mark = False
+        self.is_selected = False
 
 
 class Mark(pg.sprite.Sprite):

@@ -29,6 +29,9 @@ class Piece(pg.sprite.Sprite):
         else:
             self.is_moved = False
 
+    def check_duplicates_in_movables(self):
+        self.movable_roots = list(dict.fromkeys(self.movable_roots))
+
 
 class King(Piece):
     def __init__(self, root_size: int, color: str, root: str):
@@ -39,6 +42,7 @@ class King(Piece):
         for pos in self.movable_roots_r + self.movable_roots_b:
             if roots_dict[self.root_name] + pos in roots_dict.values():
                 self.movable_roots.append(pos)
+        self.check_duplicates_in_movables()
 
 
 class Queen(Piece):
@@ -62,6 +66,7 @@ class Queen(Piece):
             index += 1
             if break_check1 and break_check2:
                 not_calculated = False
+        self.check_duplicates_in_movables()
 
 
 class Rook(Piece):
@@ -82,6 +87,7 @@ class Rook(Piece):
             index += 1
             if break_check:
                 not_calculated = False
+        self.check_duplicates_in_movables()
 
 
 class Bishop(Piece):
@@ -104,6 +110,7 @@ class Bishop(Piece):
             prev_movable_roots = self.movable_roots
             if break_check:
                 not_calculated = False
+        self.check_duplicates_in_movables()
 
 
 class Knight(Piece):
@@ -123,6 +130,7 @@ class Knight(Piece):
                         self.movable_roots.append(pos)
                     continue
                 self.movable_roots.append(pos)
+        self.check_duplicates_in_movables()
 
 
 class Pawn(Piece):
@@ -147,3 +155,4 @@ class Pawn(Piece):
                 self.movable_roots += [9]
             if self.able_to_destroy_left and roots_dict[self.root_name] + 7 in roots_dict.values():
                 self.movable_roots += [7]
+        self.check_duplicates_in_movables()

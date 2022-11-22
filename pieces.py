@@ -136,8 +136,9 @@ class Knight(Piece):
 class Pawn(Piece):
     def __init__(self, root_size: int, color: str, root: str):
         super().__init__(root_size, color, root, '_pawn.png')
-        self.able_to_destroy_left = True
-        self.able_to_destroy_right = True
+        self.able_to_destroy_left = False
+        self.able_to_destroy_right = False
+        self.first_move = True
         self.piece_name = 'P' if color == 'w' else 'p'
 
     def check_movables(self, roots_dict: dict):
@@ -148,6 +149,11 @@ class Pawn(Piece):
                 self.movable_roots += [-9]
             if self.able_to_destroy_right and roots_dict[self.root_name] - 7 in roots_dict.values():
                 self.movable_roots += [-7]
+            if self.first_move and roots_dict[self.root_name] - 16 in roots_dict.values():
+                self.movable_roots.append(-16)
+            else:
+                if -16 in self.movable_roots:
+                    self.movable_roots.pop(self.movable_roots.index(-16))
         else:
             if roots_dict[self.root_name] + 8 in roots_dict.values():
                 self.movable_roots += [8]
@@ -155,4 +161,10 @@ class Pawn(Piece):
                 self.movable_roots += [9]
             if self.able_to_destroy_left and roots_dict[self.root_name] + 7 in roots_dict.values():
                 self.movable_roots += [7]
+            if self.first_move and roots_dict[self.root_name] + 16 in roots_dict.values():
+                self.movable_roots.append(16)
+            else:
+                if 16 in self.movable_roots:
+                    self.movable_roots.pop(self.movable_roots.index(16))
+        self.first_move = False
         self.check_duplicates_in_movables()

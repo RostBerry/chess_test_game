@@ -509,7 +509,6 @@ class InputBox(pg.sprite.Sprite):
         self.image.blit(self.__fen_text, (9, 9))
 
     def __adapt_text(self):
-        print(self.__fen_text.get_rect().width, self.rect.width)
         if (self.__fen_text.get_rect().width + 14 > self.rect.width or
                 self.__fen_text.get_rect().height + 14 > self.rect.height):
             self.input_box_font_size -= 1

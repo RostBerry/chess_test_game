@@ -164,6 +164,7 @@ class Chessboard:
                 # Places the piece on the root
                 if piece.root_name == root.root_name:
                     piece.rect = root.rect.copy()
+        self.write_piece_positions()
 
     def __setup_board_with_fen(self):
         """Decodes the Forsyth Edwards Notation and setups new board konfig"""
@@ -241,6 +242,13 @@ class Chessboard:
         class_name = globals()[piece_tuple[0]]
         return class_name(self.__size, piece_tuple[1], root_name, self.roots_dict)
 
+    def write_piece_positions(self):
+        piece_root_names = []
+        for piece in self.__all_pieces:
+            piece_root_names.append((piece.root_name, piece.color))
+        for piece in self.__all_pieces:
+            piece.pieces_positions = piece_root_names
+
     def __to_root_name(self, board_data_coord: tuple):
         """Returns the name of the root"""
         return letters[board_data_coord[1]] + str(self.__count - board_data_coord[0])
@@ -312,11 +320,10 @@ class Chessboard:
             self.__input_box.deactivate()
             if button_type == 1:  # LMB
                 self.__taken_piece = self.__get_piece_on_click(self.__pressed_root)
+            print(self.__taken_piece)
             if self.__taken_piece is not None:
                 self.__select_root(self.__pressed_root)
                 self.__pressed_root.is_selected ^= True
-                self.__taken_piece.check_movables()
-                print(self.__taken_piece.movable_roots)
                 self.__draw_available_roots(self.__taken_piece)
                 # Checking if the piece wouldn't move outside the clipped area
                 if self.__fits_in_border(self.__taken_piece, pos):
@@ -399,24 +406,13 @@ class Chessboard:
         self.__all_selects.add(select)
 
     def __draw_available_roots(self, piece: Piece):
-        movable_root = 0
-        while movable_root < len(piece.movable_roots) - 1:
-            print(movable_root)
-            print(len(piece.movable_roots))
+        piece.movable_roots = []
+        piece.check_movables()
+        for movable_root in piece.movable_roots:
             for root in self.__all_roots:
-                print('Counter: ', root.counter == self.roots_dict[piece.root_name]
-                      + piece.movable_roots[movable_root])
-                if root.counter == self.roots_dict[piece.root_name] + piece.movable_roots[movable_root]:
-                    for pieces in self.__all_pieces:
-                        print('Root name: ', root.root_name == pieces.root_name)
-                        if root.root_name == pieces.root_name:
-                            print('Color: ', pieces.color == piece.color)
-                            if pieces.color == piece.color:
-                                print(self.roots_dict[pieces.root_name] - self.roots_dict[piece.root_name])
-                                piece.movable_roots.remove(self.roots_dict[pieces.root_name] - self.roots_dict[piece.root_name])
+                if root.counter == self.roots_dict[piece.root_name] + movable_root:
                     available_root = Mark(root, 'available')
                     self.__all_marks.add(available_root)
-            movable_root += 1
 
     def __move_or_select_piece(self, root):
         self.__unselect_all_roots()
@@ -451,7 +447,7 @@ class Chessboard:
         piece.first_move = False
         piece.is_long_castling_possible = False
         piece.is_short_castling_possible = False
-        piece.movable_roots = []
+        self.write_piece_positions()
         self.__change_turn()
         self.__write_to_board_data(piece)
 

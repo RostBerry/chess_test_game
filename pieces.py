@@ -22,6 +22,7 @@ class Piece(pg.sprite.Sprite):
         self.movable_roots_b = [-9, -7, 7, 9]
         self.movable_roots = []
         self.roots_dict = roots_dict
+        self.pieces_positions = None
         self.roots_dict_keys = list(self.roots_dict.keys())
         self.roots_dict_values = list(self.roots_dict.values())
 
@@ -36,7 +37,21 @@ class Piece(pg.sprite.Sprite):
         else:
             self.is_moved = False
 
-    def check_duplicates_in_movables(self):
+    def remove_leak_movables(self):
+        self.remove_duplicates_in_movables()
+        print(self.movable_roots)
+        movable = 0
+        while movable < len(self.movable_roots) - 1:
+            for piece_pos in self.pieces_positions:
+                if (self.roots_dict[self.root_name] + self.movable_roots[movable]
+                        == self.roots_dict[piece_pos[0]]):
+                    if piece_pos[1] == self.color:
+                        self.movable_roots.remove(self.movable_roots[movable])
+                        movable -= 1
+                        print(self.movable_roots)
+            movable += 1
+
+    def remove_duplicates_in_movables(self):
         self.movable_roots = list(dict.fromkeys(self.movable_roots))
 
 
@@ -63,7 +78,7 @@ class King(Piece):
             if (self.roots_dict[self.root_name] + 2 in self.roots_dict.values()
                     and self.is_long_castling_possible):
                 self.movable_roots.append(2)
-        self.check_duplicates_in_movables()
+        self.remove_leak_movables()
 
 
 class Queen(Piece):
@@ -87,7 +102,7 @@ class Queen(Piece):
             index += 1
             if break_check1 and break_check2:
                 not_calculated = False
-        self.check_duplicates_in_movables()
+        self.remove_leak_movables()
 
 
 class Rook(Piece):
@@ -109,7 +124,7 @@ class Rook(Piece):
             index += 1
             if break_check:
                 not_calculated = False
-        self.check_duplicates_in_movables()
+        self.remove_leak_movables()
 
 
 class Bishop(Piece):
@@ -134,7 +149,7 @@ class Bishop(Piece):
             index += 1
             if break_check:
                 not_calculated = False
-        self.check_duplicates_in_movables()
+        self.remove_leak_movables()
 
 
 class Knight(Piece):
@@ -145,14 +160,21 @@ class Knight(Piece):
 
     def check_movables(self):
         for pos in self.movable_roots_n:
+            print(self.roots_dict[self.root_name] + pos)
             if self.roots_dict[self.root_name] + pos in self.roots_dict.values():
                 if pos in [-6, 6]:
                     if (self.roots_dict_keys[self.roots_dict_values.index(self.roots_dict[self.root_name] +
                                                                           pos)][1] != self.root_name[1]):
                         self.movable_roots.append(pos)
                     continue
+                if pos in [-17, 17]:
+                    if (letters.find(self.root_name[0])
+                            - letters.find(self.roots_dict_keys[self.roots_dict_values.index(self.roots_dict[self.root_name]
+                                                                                       + pos)][0]) in [1, -1, 2, -2]):
+                        self.movable_roots.append(pos)
+                    continue
                 self.movable_roots.append(pos)
-        self.check_duplicates_in_movables()
+        self.remove_leak_movables()
 
 
 class Pawn(Piece):
@@ -178,6 +200,6 @@ class Pawn(Piece):
             if self.able_to_destroy_left and self.roots_dict[self.root_name] + 7 in self.roots_dict.values():
                 self.movable_roots += [7]
         if self.first_move and (self.roots_dict[self.root_name] + 16 if self.color == 'b'
-                                else self.roots_dict[self.root_name] - 16) in self.roots_dict.values():
+        else self.roots_dict[self.root_name] - 16) in self.roots_dict.values():
             self.movable_roots.append(16 if self.color == 'b' else -16)
-        self.check_duplicates_in_movables()
+        self.remove_leak_movables()

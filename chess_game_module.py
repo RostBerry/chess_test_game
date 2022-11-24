@@ -27,7 +27,6 @@ class Chessboard:
         self.__all_marks = pg.sprite.Group()
         # Defining interactive objects or variables
         self.roots_dict = {}
-        self.__root_counter = 0
         self.__input_box = None
         self.__pressed_input_box = None
         self.__pressed_root = None
@@ -133,13 +132,12 @@ class Chessboard:
         # Creates the roots and adds them to the sprite group
         for y in range(self.__count):
             for x in range(self.__count):
-                root_name = letters[x] + str(self.__count - y)
-                self.__root_counter += 1
-                self.roots_dict[root_name] = self.__root_counter
+                root_name = self.__to_root_name((y, x))
+                self.roots_dict[root_name[0]] = root_name[1]
                 root = Root(root_color_order,
                             self.__size,
                             (x, y),
-                            root_name, self.__root_counter)
+                            root_name)
                 root_group.add(root)
                 root_color_order ^= True  # Changing the root color
             root_color_order = root_color_order ^ True if is_even_count else root_color_order
@@ -162,7 +160,7 @@ class Chessboard:
         for piece in self.__all_pieces:
             for root in self.__all_roots:
                 # Places the piece on the root
-                if piece.root_name == root.root_name:
+                if piece.root_name[0] == root.root_name[0]:
                     piece.rect = root.rect.copy()
         self.write_piece_positions()
 
@@ -243,16 +241,17 @@ class Chessboard:
         return class_name(self.__size, piece_tuple[1], root_name, self.roots_dict)
 
     def write_piece_positions(self):
-        piece_root_names = []
+        pieces_root_names = []
         for piece in self.__all_pieces:
-            piece_root_names.append((piece.root_name, piece.color))
+            pieces_root_names.append((piece.root_name, piece.color))
         for piece in self.__all_pieces:
-            piece.pieces_positions = piece_root_names
-        print(piece_root_names)
+            piece.pieces_positions = pieces_root_names
+        print(pieces_root_names)
 
     def __to_root_name(self, board_data_coord: tuple):
         """Returns the name of the root"""
-        return letters[board_data_coord[1]] + str(self.__count - board_data_coord[0])
+        return (letters[board_data_coord[1]] + str(self.__count - board_data_coord[0]),
+                (board_data_coord[1] + 1, board_data_coord[0] + 1))
 
     def __get_root(self, pos: tuple):
         """Returns the root below the mouse position"""
@@ -270,7 +269,7 @@ class Chessboard:
     def __get_piece_on_click(self, root):
         """Returns the clicked piece"""
         for piece in self.__all_pieces:
-            if piece.root_name == root.root_name:
+            if piece.root_name[0] == root.root_name[0]:
                 print('Piece color:', piece.color, 'Turn:', self.__turn)
                 if piece.color == self.__turn and self.__selected_piece is None:
                     if self.__taken_piece is None:
@@ -396,7 +395,7 @@ class Chessboard:
             self.__all_marks.add(mark)
         else:
             for mark in self.__all_marks:
-                if mark.root_name == root.root_name:
+                if mark.root_name[0] == root.root_name[0]:
                     mark.kill()
                     break
         root.mark ^= True
@@ -410,8 +409,11 @@ class Chessboard:
         piece.movable_roots = []
         piece.check_movables()
         for movable_root in piece.movable_roots:
+            print('piece root name:', piece.root_name[1], 'movable:', movable_root)
+            moving_dist = (movable_root[0], movable_root[1])
             for root in self.__all_roots:
-                if root.counter == self.roots_dict[piece.root_name] + movable_root:
+                print(root.root_name[1], moving_dist)
+                if root.root_name[1] == moving_dist:
                     available_root = Mark(root, 'available')
                     self.__all_marks.add(available_root)
 
@@ -434,10 +436,10 @@ class Chessboard:
             self.__selected_piece = None
 
     def __write_to_board_data(self, piece):
-        value = letters.find(piece.root_name[0])
-        row = self.__count - int(piece.root_name[1])
-        prev_value = letters.find(piece.prev_root_name[0])
-        prev_row = self.__count - int(piece.prev_root_name[1])
+        value = letters.find(piece.root_name[0][0])
+        row = self.__count - int(piece.root_name[0][1])
+        prev_value = letters.find(piece.prev_root_name[0][0])
+        prev_row = self.__count - int(piece.prev_root_name[0][1])
         self.__board_data[prev_row][prev_value] = 0
         self.__board_data[row][value] = piece.piece_name
 
@@ -445,9 +447,11 @@ class Chessboard:
 
     def __after_move_preps(self, piece):
         self.__unmark_all_marks()
-        piece.first_move = False
-        piece.is_long_castling_possible = False
-        piece.is_short_castling_possible = False
+        if piece.piece_name in ['p', 'P']:
+            piece.first_move = False
+        if piece.piece_name in ['k', 'K']:
+            piece.is_long_castling_possible = False
+            piece.is_short_castling_possible = False
         self.write_piece_positions()
         self.__change_turn()
         self.__write_to_board_data(piece)
@@ -533,12 +537,11 @@ class InputBox(pg.sprite.Sprite):
 class Root(pg.sprite.Sprite):
     """Root main class"""
 
-    def __init__(self, color_order: int, size: int, coordinates: tuple, name: str, counter):
+    def __init__(self, color_order: int, size: int, coordinates: tuple, name: str):
         super().__init__()
         x, y = coordinates
         self.color = ROOT_COLORS[color_order]
         self.root_name = name
-        self.counter = counter
         self.image = pg.image.load(IMG_PATH + self.color)
         self.image = pg.transform.scale(self.image, (size, size))
         self.rect = pg.Rect(x * size, y * size, size, size)

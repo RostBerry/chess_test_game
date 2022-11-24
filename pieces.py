@@ -15,9 +15,6 @@ class Piece(pg.sprite.Sprite):
         self.prev_root_name = None
         self.root_name = root_name
         self.is_moved = False
-        self.first_move = True
-        self.is_short_castling_possible = True
-        self.is_long_castling_possible = True
         self.movable_roots_r = [-8, -1, 1, 8]
         self.movable_roots_b = [-9, -7, 7, 9]
         self.movable_roots = []
@@ -42,11 +39,11 @@ class Piece(pg.sprite.Sprite):
         print(self.movable_roots)
         movable = 0
         print(self.pieces_positions)
-        while movable < len(self.movable_roots) - 1:
+        while movable < len(self.movable_roots):
             for piece_pos in self.pieces_positions:
-                if (self.roots_dict[self.root_name] + self.movable_roots[movable]
-                        == self.roots_dict[piece_pos[0]]):
-                    if piece_pos[1] == self.color:
+                if (self.roots_dict[self.root_name[0]] + self.movable_roots[movable]
+                        == self.roots_dict[piece_pos[0][0]]):
+                    if piece_pos[0][1] == self.color:
                         self.movable_roots.remove(self.movable_roots[movable])
                         movable -= 1
                         print(self.movable_roots)
@@ -60,6 +57,8 @@ class King(Piece):
     def __init__(self, root_size: int, color: str, root: str, roots_dict):
         super().__init__(root_size, color, root, '_king.png', roots_dict)
         self.piece_name = 'K' if color == 'w' else 'k'
+        self.is_short_castling_possible = True
+        self.is_long_castling_possible = True
 
     def check_movables(self):
         for pos in self.movable_roots_r + self.movable_roots_b:
@@ -177,24 +176,28 @@ class Pawn(Piece):
         super().__init__(root_size, color, root, '_pawn.png', roots_dict)
         self.able_to_destroy_left = False
         self.able_to_destroy_right = False
+        self.first_move = True
         self.piece_name = 'P' if color == 'w' else 'p'
 
     def check_movables(self):
+        row = self.root_name[1][1]
+        column = self.root_name[1][0]
         if self.color == 'w':
-            if self.roots_dict[self.root_name] - 8 in self.roots_dict.values():
-                self.movable_roots += [-8]
-            if self.able_to_destroy_left and self.roots_dict[self.root_name] - 9 in self.roots_dict.values():
-                self.movable_roots += [-9]
-            if self.able_to_destroy_right and self.roots_dict[self.root_name] - 7 in self.roots_dict.values():
-                self.movable_roots += [-7]
+            if (column, row - 1) in self.roots_dict.values():
+                self.movable_roots.append((column, row - 1))
+            if self.first_move and (column, row - 2) in self.roots_dict.values():
+                self.movable_roots.append((column, row - 2))
+            if self.able_to_destroy_right and (column + 1, row - 1) in self.roots_dict.values():
+                self.movable_roots.append((column + 1, row - 1))
+            if self.able_to_destroy_left and (column - 1, row - 1) in self.roots_dict.values():
+                self.movable_roots.append((column - 1, row - 1))
         else:
-            if self.roots_dict[self.root_name] + 8 in self.roots_dict.values():
-                self.movable_roots += [8]
-            if self.able_to_destroy_right and self.roots_dict[self.root_name] + 9 in self.roots_dict.values():
-                self.movable_roots += [9]
-            if self.able_to_destroy_left and self.roots_dict[self.root_name] + 7 in self.roots_dict.values():
-                self.movable_roots += [7]
-        if self.first_move and (self.roots_dict[self.root_name] + 16 if self.color == 'b'
-        else self.roots_dict[self.root_name] - 16) in self.roots_dict.values():
-            self.movable_roots.append(16 if self.color == 'b' else -16)
+            if (column, row + 1) in self.roots_dict.values():
+                self.movable_roots.append((column, row + 1))
+            if self.first_move and (column, row + 2) in self.roots_dict.values():
+                self.movable_roots.append((column, row + 2))
+            if self.able_to_destroy_right and (column - 1, row + 1) in self.roots_dict.values():
+                self.movable_roots.append((column - 1, row + 1))
+            if self.able_to_destroy_left and (column + 1, row + 1) in self.roots_dict.values():
+                self.movable_roots.append((column + 1, row + 1))
         self.remove_leak_movables()

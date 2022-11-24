@@ -1,5 +1,4 @@
 from konfig import *
-import chess_game_module
 import pygame as pg
 
 
@@ -171,6 +170,7 @@ class Knight(Piece):
         self.remove_leak_movables()
 
 
+# noinspection PyTypeChecker
 class Pawn(Piece):
     def __init__(self, root_size: int, color: str, root: str, roots_dict):
         super().__init__(root_size, color, root, '_pawn.png', roots_dict)

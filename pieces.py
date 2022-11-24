@@ -41,6 +41,7 @@ class Piece(pg.sprite.Sprite):
         self.remove_duplicates_in_movables()
         print(self.movable_roots)
         movable = 0
+        print(self.pieces_positions)
         while movable < len(self.movable_roots) - 1:
             for piece_pos in self.pieces_positions:
                 if (self.roots_dict[self.root_name] + self.movable_roots[movable]
@@ -165,12 +166,6 @@ class Knight(Piece):
                 if pos in [-6, 6]:
                     if (self.roots_dict_keys[self.roots_dict_values.index(self.roots_dict[self.root_name] +
                                                                           pos)][1] != self.root_name[1]):
-                        self.movable_roots.append(pos)
-                    continue
-                if pos in [-17, 17]:
-                    if (letters.find(self.root_name[0])
-                            - letters.find(self.roots_dict_keys[self.roots_dict_values.index(self.roots_dict[self.root_name]
-                                                                                       + pos)][0]) in [1, -1, 2, -2]):
                         self.movable_roots.append(pos)
                     continue
                 self.movable_roots.append(pos)

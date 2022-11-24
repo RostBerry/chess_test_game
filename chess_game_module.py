@@ -248,6 +248,7 @@ class Chessboard:
             piece_root_names.append((piece.root_name, piece.color))
         for piece in self.__all_pieces:
             piece.pieces_positions = piece_root_names
+        print(piece_root_names)
 
     def __to_root_name(self, board_data_coord: tuple):
         """Returns the name of the root"""

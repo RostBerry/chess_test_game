@@ -246,7 +246,6 @@ class Chessboard:
             pieces_root_names.append((piece.root_name, piece.color))
         for piece in self.__all_pieces:
             piece.pieces_positions = pieces_root_names
-        print(pieces_root_names)
 
     def __to_root_name(self, board_data_coord: tuple):
         """Returns the name of the root"""
@@ -408,11 +407,10 @@ class Chessboard:
     def __draw_available_roots(self, piece: Piece):
         piece.movable_roots = []
         piece.check_movables()
-        for movable_root in piece.movable_roots:
-            print('piece root name:', piece.root_name[1], 'movable:', movable_root)
-            moving_dist = (movable_root[0], movable_root[1])
+        for available in piece.movable_roots:
+            print('piece root name:', piece.root_name[1], 'available:', available)
+            moving_dist = (available[0], available[1])
             for root in self.__all_roots:
-                print(root.root_name[1], moving_dist)
                 if root.root_name[1] == moving_dist:
                     available_root = Mark(root, 'available')
                     self.__all_marks.add(available_root)

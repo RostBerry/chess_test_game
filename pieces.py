@@ -13,9 +13,13 @@ class Piece(pg.sprite.Sprite):
         self.color = color
         self.prev_root_name = None
         self.root_name = root_name
+        self.row = self.root_name[1][1]
+        self.column = self.root_name[1][0]
         self.is_moved = False
-        self.movable_roots_r = [-8, -1, 1, 8]
-        self.movable_roots_b = [-9, -7, 7, 9]
+        self.movable_roots_r = [(-1, 0), (1, 0),  # Left/Right
+                                (0, 1), (0, -1)]  # Up/Down
+        self.movable_roots_b = [(-1, -1), (1, -1),  # Up
+                                (-1, 1), (1, 1)]  # Down
         self.movable_roots = []
         self.roots_dict = roots_dict
         self.pieces_positions = None
@@ -30,6 +34,8 @@ class Piece(pg.sprite.Sprite):
             self.is_moved = True
             self.prev_root_name = self.root_name
             self.root_name = root.root_name
+            self.row = self.root_name[1][1]
+            self.column = self.root_name[1][0]
         else:
             self.is_moved = False
 
@@ -52,6 +58,7 @@ class Piece(pg.sprite.Sprite):
         self.movable_roots = list(dict.fromkeys(self.movable_roots))
 
 
+# noinspection PyTypeChecker
 class King(Piece):
     def __init__(self, root_size: int, color: str, root: str, roots_dict):
         super().__init__(root_size, color, root, '_king.png', roots_dict)
@@ -60,23 +67,12 @@ class King(Piece):
         self.is_long_castling_possible = True
 
     def check_movables(self):
-        for pos in self.movable_roots_r + self.movable_roots_b:
-            if self.roots_dict[self.root_name] + pos in self.roots_dict.values():
-                self.movable_roots.append(pos)
-        if self.color == 'w':
-            if (self.roots_dict[self.root_name] + 2 in self.roots_dict.values()
-                    and self.is_short_castling_possible):
-                self.movable_roots.append(2)
-            if (self.roots_dict[self.root_name] - 2 in self.roots_dict.values()
-                    and self.is_long_castling_possible):
-                self.movable_roots.append(-2)
-        else:
-            if (self.roots_dict[self.root_name] - 2 in self.roots_dict.values()
-                    and self.is_short_castling_possible):
-                self.movable_roots.append(-2)
-            if (self.roots_dict[self.root_name] + 2 in self.roots_dict.values()
-                    and self.is_long_castling_possible):
-                self.movable_roots.append(2)
+        for movable_root in self.movable_roots_b:
+            if (self.column + movable_root[0], self.row + movable_root[1]) in self.roots_dict.values():
+                self.movable_roots.append((self.column + movable_root[0], self.row + movable_root[1]))
+        for movable_root in self.movable_roots_r:
+            if (self.column + movable_root[0], self.row + movable_root[1]) in self.roots_dict.values():
+                self.movable_roots.append((self.column + movable_root[0], self.row + movable_root[1]))
         self.remove_leak_movables()
 
 
@@ -86,21 +82,28 @@ class Queen(Piece):
         self.piece_name = 'Q' if color == 'w' else 'q'
 
     def check_movables(self):
-        not_calculated = True
-        break_check1 = False
-        break_check2 = False
-        index = 1
-        while not_calculated:
-            for pos in self.movable_roots_b + self.movable_roots_r:
-                if self.roots_dict[self.root_name] + pos * index in self.roots_dict.values():
-                    self.movable_roots.append(pos * index)
-                elif pos in self.movable_roots_b:
-                    break_check1 = True
-                elif pos in self.movable_roots_r:
-                    break_check2 = True
-            index += 1
-            if break_check1 and break_check2:
-                not_calculated = False
+        for movable_root in self.movable_roots_b:
+            prev_movables = self.movable_roots.copy()
+            print(prev_movables)
+            offset = (self.column + movable_root[0], self.row + movable_root[1])
+            while True:
+                print(offset)
+                if offset in self.roots_dict.values():
+                    self.movable_roots.append(offset)
+                else:
+                    break
+                offset = (offset[0] + movable_root[0], offset[1] + movable_root[1])
+        for movable_root in self.movable_roots_r:
+            prev_movables = self.movable_roots.copy()
+            print(prev_movables)
+            offset = (self.column + movable_root[0], self.row + movable_root[1])
+            while True:
+                print(offset)
+                if offset in self.roots_dict.values():
+                    self.movable_roots.append(offset)
+                else:
+                    break
+                offset = (offset[0] + movable_root[0], offset[1] + movable_root[1])
         self.remove_leak_movables()
 
 
@@ -110,64 +113,53 @@ class Rook(Piece):
         self.piece_name = 'R' if color == 'w' else 'r'
 
     def check_movables(self):
-        not_calculated = True
-        break_check = False
-        index = 1
-        while not_calculated:
-            movables_length = len(self.movable_roots)
-            for pos in self.movable_roots_r:
-                if self.roots_dict[self.root_name] + pos * index in self.roots_dict.values():
-                    self.movable_roots.append(pos * index)
-                if len(self.movable_roots) == movables_length:
-                    break_check = True
-            index += 1
-            if break_check:
-                not_calculated = False
+        for movable_root in self.movable_roots_r:
+            prev_movables = self.movable_roots.copy()
+            print(prev_movables)
+            offset = (self.column + movable_root[0], self.row + movable_root[1])
+            while True:
+                print(offset)
+                if offset in self.roots_dict.values():
+                    self.movable_roots.append(offset)
+                else:
+                    break
+                offset = (offset[0] + movable_root[0], offset[1] + movable_root[1])
         self.remove_leak_movables()
 
 
+# noinspection PyTypeChecker
 class Bishop(Piece):
     def __init__(self, root_size: int, color: str, root: str, roots_dict):
         super().__init__(root_size, color, root, '_bishop.png', roots_dict)
         self.piece_name = 'B' if color == 'w' else 'b'
 
     def check_movables(self):
-        not_calculated = True
-        break_check = False
-        index = 1
-        while not_calculated:
-            movables_length = len(self.movable_roots)
-            for pos in self.movable_roots_b:
-                if self.roots_dict[self.root_name] + pos * index in self.roots_dict.values():
-                    if int((self.roots_dict_keys[self.roots_dict_values.index(self.roots_dict[self.root_name]
-                                                                              + pos * index)][1]) != self.roots_dict[
-                               self.root_name] + pos * (index - 1)):
-                        self.movable_roots.append(pos * index)
-            if len(self.movable_roots) == movables_length:
-                break_check = True
-            index += 1
-            if break_check:
-                not_calculated = False
+        for movable_root in self.movable_roots_b:
+            prev_movables = self.movable_roots.copy()
+            print(prev_movables)
+            offset = (self.column + movable_root[0], self.row + movable_root[1])
+            while True:
+                print(offset)
+                if offset in self.roots_dict.values():
+                    self.movable_roots.append(offset)
+                else:
+                    break
+                offset = (offset[0] + movable_root[0], offset[1] + movable_root[1])
         self.remove_leak_movables()
 
 
+# noinspection PyTypeChecker
 class Knight(Piece):
     def __init__(self, root_size: int, color: str, root: str, roots_dict):
         super().__init__(root_size, color, root, '_knight.png', roots_dict)
         self.piece_name = 'N' if color == 'w' else 'n'
-        self.movable_roots_n = [-17, -15, -10, -6, 6, 10, 15, 17]
+        self.movable_roots_n = [(-1, -2), (1, -2), (-2, -1), (2, -1),  # Up
+                                (-2, 1), (2, 1), (-1, 2), (1, 2)]  # Down
 
     def check_movables(self):
-        for pos in self.movable_roots_n:
-            print(self.roots_dict[self.root_name] + pos)
-            if self.roots_dict[self.root_name] + pos in self.roots_dict.values():
-                if pos in [-6, 6]:
-                    if (self.roots_dict_keys[self.roots_dict_values.index(self.roots_dict[self.root_name] +
-                                                                          pos)][1] != self.root_name[1]):
-                        self.movable_roots.append(pos)
-                    continue
-                self.movable_roots.append(pos)
-        self.remove_leak_movables()
+        for movable_root in self.movable_roots_n:
+            if (self.column + movable_root[0], self.row + movable_root[1]) in self.roots_dict.values():
+                self.movable_roots.append((self.column + movable_root[0], self.row + movable_root[1]))
 
 
 # noinspection PyTypeChecker
@@ -180,24 +172,22 @@ class Pawn(Piece):
         self.piece_name = 'P' if color == 'w' else 'p'
 
     def check_movables(self):
-        row = self.root_name[1][1]
-        column = self.root_name[1][0]
         if self.color == 'w':
-            if (column, row - 1) in self.roots_dict.values():
-                self.movable_roots.append((column, row - 1))
-            if self.first_move and (column, row - 2) in self.roots_dict.values():
-                self.movable_roots.append((column, row - 2))
-            if self.able_to_destroy_right and (column + 1, row - 1) in self.roots_dict.values():
-                self.movable_roots.append((column + 1, row - 1))
-            if self.able_to_destroy_left and (column - 1, row - 1) in self.roots_dict.values():
-                self.movable_roots.append((column - 1, row - 1))
+            if (self.column, self.row - 1) in self.roots_dict.values():
+                self.movable_roots.append((self.column, self.row - 1))
+            if self.first_move and (self.column, self.row - 2) in self.roots_dict.values():
+                self.movable_roots.append((self.column, self.row - 2))
+            if self.able_to_destroy_right and (self.column + 1, self.row - 1) in self.roots_dict.values():
+                self.movable_roots.append((self.column + 1, self.row - 1))
+            if self.able_to_destroy_left and (self.column - 1, self.row - 1) in self.roots_dict.values():
+                self.movable_roots.append((self.column - 1, self.row - 1))
         else:
-            if (column, row + 1) in self.roots_dict.values():
-                self.movable_roots.append((column, row + 1))
-            if self.first_move and (column, row + 2) in self.roots_dict.values():
-                self.movable_roots.append((column, row + 2))
-            if self.able_to_destroy_right and (column - 1, row + 1) in self.roots_dict.values():
-                self.movable_roots.append((column - 1, row + 1))
-            if self.able_to_destroy_left and (column + 1, row + 1) in self.roots_dict.values():
-                self.movable_roots.append((column + 1, row + 1))
+            if (self.column, self.row + 1) in self.roots_dict.values():
+                self.movable_roots.append((self.column, self.row + 1))
+            if self.first_move and (self.column, self.row + 2) in self.roots_dict.values():
+                self.movable_roots.append((self.column, self.row + 2))
+            if self.able_to_destroy_right and (self.column - 1, self.row + 1) in self.roots_dict.values():
+                self.movable_roots.append((self.column - 1, self.row + 1))
+            if self.able_to_destroy_left and (self.column + 1, self.row + 1) in self.roots_dict.values():
+                self.movable_roots.append((self.column + 1, self.row + 1))
         self.remove_leak_movables()

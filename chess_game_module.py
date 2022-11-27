@@ -162,6 +162,7 @@ class Chessboard:
                 # Places the piece on the root
                 if piece.root_name[0] == root.root_name[0]:
                     piece.rect = root.rect.copy()
+                    root.kept = True
         self.write_piece_positions()
 
     def __setup_board_with_fen(self):
@@ -189,12 +190,7 @@ class Chessboard:
         # Saving additional info
         self.__turn = self.__other_map[0]
         print("White's turn" if self.__other_map[0] == 'w' else "Black's turn")
-        colors = {'whites': ('KQ', 'K', 'Q'), 'blacks': ('kq', 'k', 'q')}
-        for i in colors:  # What castlings can be done
-            print(f'Both castlings possible for {i}' if colors[i][0] in self.__other_map[1]
-                  else f'Short castling for {i}' if colors[i][1] in self.__other_map[1]
-                  else f'Long castling for {i}' if colors[i][2] in self.__other_map[1]
-                  else f'No possible castlings for {i}')
+        self.__castling_logic()
         print('The last pawn move is: {}'.format('None' if '-' in self.__other_map[2] else self.__other_map[2]))
 
         print(f'Halfmoves done: {self.__other_map[3]}')
@@ -245,7 +241,8 @@ class Chessboard:
         for piece in self.__all_pieces:
             pieces_root_names.append((piece.root_name, piece.color))
         for piece in self.__all_pieces:
-            piece.pieces_positions = pieces_root_names
+            piece.pieces_positions = tuple(pieces_root_names)
+            piece.all_roots = self.__all_roots
 
     def __to_root_name(self, board_data_coord: tuple):
         """Returns the name of the root"""
@@ -309,7 +306,10 @@ class Chessboard:
         """Works when the mouse btn is clicked"""
         self.__clicked = True  # Statement needed to correct root selection
         # Checking if the user clicked on root or input box
-        self.__pressed_root = self.__get_root(pos) if self.__selected_piece is None else self.__pressed_root
+        if button_type == 1:
+            self.__pressed_root = (self.__get_root(pos)
+                                   if self.__selected_piece is None
+                                   else self.__pressed_root)
         self.__pressed_input_box = self.__get_input_box(pos)
         # User clicked on the input box
         if self.__pressed_input_box is not None:
@@ -319,20 +319,28 @@ class Chessboard:
             self.__input_box.deactivate()
             if button_type == 1:  # LMB
                 self.__taken_piece = self.__get_piece_on_click(self.__pressed_root)
-            print(self.__taken_piece)
-            if self.__taken_piece is not None:
-                self.__select_root(self.__pressed_root)
-                self.__pressed_root.is_selected ^= True
-                self.__draw_available_roots(self.__taken_piece)
-                # Checking if the piece wouldn't move outside the clipped area
-                if self.__fits_in_border(self.__taken_piece, pos):
-                    self.__taken_piece.rect.center = pos
+
+                if self.__taken_piece is not None:
+                    self.__select_root(self.__pressed_root)
+                    self.__pressed_root.is_selected ^= True
+                    self.__draw_available_roots(self.__taken_piece)
+                    # Checking if the piece wouldn't move outside the clipped area
+                    if self.__fits_in_border(self.__taken_piece, pos):
+                        self.__taken_piece.rect.center = pos
+                    else:
+                        pass
+
+                elif self.__selected_piece is not None:
+                    if self.__fits_in_border(self.__selected_piece, pos):
+                        self.__selected_piece.rect.center = pos
+                        self.__can_drag = True
+
                 else:
-                    pass
-            elif self.__selected_piece is not None:
-                if self.__fits_in_border(self.__selected_piece, pos):
-                    self.__selected_piece.rect.center = pos
-                    self.__can_drag = True
+                    self.__unmark_all_marks()
+
+            elif button_type == 3:
+                if self.__selected_piece is not None or self.__taken_piece is not None:
+                    self.__move_or_select_piece(self.__pressed_root)
             self.__grand_update()
 
     def mouse_btn_up(self, button_type: int, pos: tuple):
@@ -418,20 +426,36 @@ class Chessboard:
     def __move_or_select_piece(self, root):
         self.__unselect_all_roots()
         if self.__taken_piece is not None:
-            self.__taken_piece.move_to_root(root)
-            if self.__taken_piece.is_moved:
-                self.__after_move_preps(self.__taken_piece)
+            if root.root_name[1] in self.__taken_piece.movable_roots:
+                for piece in self.__all_pieces:
+                    if piece.root_name == root.root_name:
+                        self.kill_piece(piece)
+                self.__taken_piece.move_to_root(root)
             else:
-                self.__select_root(root)
+                self.__taken_piece.move_to_root(self.__pressed_root)
+            if self.__taken_piece.is_moved:
+                self.__after_move_preps(self.__taken_piece, root)
+            else:
+                self.__select_root(self.__pressed_root)
                 root.is_selected ^= True
                 self.__selected_piece = self.__taken_piece
             self.__taken_piece = None
         elif self.__selected_piece is not None:
             self.__unmark_all_marks()
-            self.__selected_piece.move_to_root(root)
+            if root.root_name[1] in self.__selected_piece.movable_roots:
+                for piece in self.__all_pieces:
+                    if piece.root_name == root.root_name:
+                        self.kill_piece(piece)
+                self.__selected_piece.move_to_root(root)
+            else:
+                self.__selected_piece.move_to_root(self.__pressed_root)
             if self.__selected_piece.is_moved:
-                self.__after_move_preps(self.__selected_piece)
+                self.__after_move_preps(self.__selected_piece, root)
             self.__selected_piece = None
+
+    def kill_piece(self, piece):
+        piece.kill()
+        self.__all_pieces.remove(piece)
 
     def __write_to_board_data(self, piece):
         value = letters.find(piece.root_name[0][0])
@@ -443,16 +467,34 @@ class Chessboard:
 
         self.__write_fen_from_board()
 
-    def __after_move_preps(self, piece):
+    def __after_move_preps(self, piece, root):
         self.__unmark_all_marks()
+        self.__pressed_root.kept = False
+        root.kept = True
         if piece.piece_name in ['p', 'P']:
+            if piece.first_move:
+                self.__other_map[2] = piece.root_name[0]
             piece.first_move = False
         if piece.piece_name in ['k', 'K']:
             piece.is_long_castling_possible = False
             piece.is_short_castling_possible = False
+            self.__other_map[1] = self.__other_map[1].replace('KQ' if piece.color == 'w' else 'kq',
+                                                              '')
+            print(self.__other_map)
+            self.__castling_logic()
         self.write_piece_positions()
         self.__change_turn()
         self.__write_to_board_data(piece)
+
+    def __castling_logic(self):
+        colors = {'whites': ('KQ', 'K', 'Q'), 'blacks': ('kq', 'k', 'q')}
+        for i in colors:  # What castlings can be done
+            print(f'Both castlings possible for {i}' if colors[i][0] in self.__other_map[1]
+                  else f'Short castling for {i}' if colors[i][1] in self.__other_map[1]
+                  else f'Long castling for {i}' if colors[i][2] in self.__other_map[1]
+                  else f'No possible castlings for {i}')
+        if self.__other_map[1] == '':
+            self.__other_map[1] = '-'
 
     def __change_turn(self):
         self.__turn = 'w' if self.__turn == 'b' else 'b'
@@ -545,6 +587,7 @@ class Root(pg.sprite.Sprite):
         self.rect = pg.Rect(x * size, y * size, size, size)
         self.mark = False
         self.is_selected = False
+        self.kept = False
 
 
 class Mark(pg.sprite.Sprite):

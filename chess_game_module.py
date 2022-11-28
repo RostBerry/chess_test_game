@@ -474,6 +474,8 @@ class Chessboard:
         if piece.piece_name in ['p', 'P']:
             if piece.first_move:
                 self.__other_map[2] = piece.root_name[0]
+            else:
+                self.__other_map[2] = '-'
             piece.first_move = False
         if piece.piece_name in ['k', 'K']:
             piece.is_long_castling_possible = False

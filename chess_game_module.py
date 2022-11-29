@@ -22,7 +22,7 @@ class Chessboard:
         # Defining sprite groups
         self.__all_roots = pg.sprite.Group()
         self.__all_pieces = pg.sprite.Group()
-        self.__all_pieces_dict = {}
+        self.__all_pieces_list = []
         self.__all_selects = pg.sprite.Group()
         self.__all_checks = pg.sprite.Group()
         self.__all_input_boxes = pg.sprite.Group()
@@ -153,20 +153,19 @@ class Chessboard:
 
     def __setup_board(self):
         """Draws the pieces on the roots from board_data"""
+        self.__all_pieces_list = []
         for j in range(len(self.__board_data)):
             for i, root_value in enumerate(self.__board_data[j]):
                 if root_value != 0:
                     # Creating a piece based on board_data and adding it to the group
                     piece = self.__create_piece(root_value, (j, i))
                     self.__all_pieces.add(piece)
-                    self.__all_pieces_dict[piece.piece_name] = [piece.root_name, None]
         for piece in self.__all_pieces:
             for root in self.__all_roots:
                 # Places the piece on the root
                 if piece.root_name[0] == root.root_name[0]:
                     piece.rect = root.rect.copy()
                     root.kept = True
-                    self.__all_pieces_dict[piece.piece_name][1] = root
         self.write_piece_positions()
 
     def __setup_board_with_fen(self):
@@ -278,6 +277,16 @@ class Chessboard:
                         self.__taken_piece.move_to_root(self.__pressed_root)
                         return piece
         return None
+
+    def __get_piece_pos_by_name(self, name):
+        for finding_piece in self.__all_pieces:
+            if finding_piece.piece_name == name:
+                return finding_piece.root_name[1]
+
+    def __get_piece_by_piece_pos(self, piece_pos):
+        for piece in self.__all_pieces:
+            if piece.root_name[1] == piece_pos:
+                return piece
 
     def __fits_in_border(self, piece, pos):
         """Checks if the mouse isn't outside the borders"""
@@ -505,8 +514,8 @@ class Chessboard:
 
     def __rooks_after_move_logic(self, piece):
         if (piece.first_move and
-                piece.root_name[1][0] - self.__all_pieces_dict['K' if piece.color == 'w'
-                                                               else 'k'][0][1][0] > 0):
+                piece.root_name[1][0] - self.__get_piece_pos_by_name('K' if piece.color == 'w'
+                                                                 else 'k') > 0):
             self.__other_map[1] = self.__other_map[1].replace('K' if piece.color == 'w' else 'k', '')
         else:
             self.__other_map[1] = self.__other_map[1].replace('Q' if piece.color == 'w' else 'q', '')
@@ -521,13 +530,14 @@ class Chessboard:
 
     def __check_check(self, piece):
         piece.check_movables()
-        king_color = 'K' if piece.color == 'b' else 'k'
-        if self.__all_pieces_dict[king_color][0][1] in piece.movable_roots:
-            self.__check_logic(self.__all_pieces_dict[king_color][1])
+        king_pos = self.__get_piece_pos_by_name('K' if piece.color == 'b' else 'k')
+        if king_pos in piece.movable_roots:
+            self.__check_logic(king_pos)
 
     def __check_logic(self, king_coords):
         print('Check')
-        check = Check(king_coords)
+        check = Check(self.__get_piece_by_piece_pos(king_coords))
+        self.__all_checks.add(check)
 
     def __change_turn(self):
         self.__turn = 'w' if self.__turn == 'b' else 'b'

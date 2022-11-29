@@ -26,6 +26,7 @@ BLACK = (0, 0, 0)
 GRAY = (180, 180, 180)
 ROOT_COLORS = ['static images/white_root.jpg', 'static images/black_root.jpg']
 ACTIVE_ROOT_COLOR = (0, 180, 0, 50)
+CHECK_ROOT_COLOR = (180, 0, 0, 50)
 LETTERS_COLOR = WHITE
 NUMBERS_COLOR = WHITE
 ROOT_SUBSCRIPT_COLOR = WHITE

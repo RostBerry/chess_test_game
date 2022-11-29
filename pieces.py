@@ -16,6 +16,7 @@ class Piece(pg.sprite.Sprite):
         self.row = self.root_name[1][1]
         self.column = self.root_name[1][0]
         self.is_moved = False
+        self.first_move = True
         self.movable_roots_r = [(-1, 0), (1, 0),  # Left/Right
                                 (0, 1), (0, -1)]  # Up/Down
         self.movable_roots_b = [(-1, -1), (1, -1),  # Up
@@ -162,10 +163,9 @@ class Knight(Piece):
 class Pawn(Piece):
     def __init__(self, root_size: int, color: str, root: str, roots_dict):
         super().__init__(root_size, color, root, '_pawn.png', roots_dict)
+        self.piece_name = 'P' if color == 'w' else 'p'
         self.able_to_destroy_left = False
         self.able_to_destroy_right = False
-        self.first_move = True
-        self.piece_name = 'P' if color == 'w' else 'p'
 
     def check_movables(self):
 

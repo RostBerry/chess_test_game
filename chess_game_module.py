@@ -22,7 +22,9 @@ class Chessboard:
         # Defining sprite groups
         self.__all_roots = pg.sprite.Group()
         self.__all_pieces = pg.sprite.Group()
+        self.__all_pieces_dict = {}
         self.__all_selects = pg.sprite.Group()
+        self.__all_checks = pg.sprite.Group()
         self.__all_input_boxes = pg.sprite.Group()
         self.__all_marks = pg.sprite.Group()
         # Defining interactive objects or variables
@@ -157,12 +159,14 @@ class Chessboard:
                     # Creating a piece based on board_data and adding it to the group
                     piece = self.__create_piece(root_value, (j, i))
                     self.__all_pieces.add(piece)
+                    self.__all_pieces_dict[piece.piece_name] = [piece.root_name, None]
         for piece in self.__all_pieces:
             for root in self.__all_roots:
                 # Places the piece on the root
                 if piece.root_name[0] == root.root_name[0]:
                     piece.rect = root.rect.copy()
                     root.kept = True
+                    self.__all_pieces_dict[piece.piece_name][1] = root
         self.write_piece_positions()
 
     def __setup_board_with_fen(self):
@@ -471,22 +475,41 @@ class Chessboard:
         self.__unmark_all_marks()
         self.__pressed_root.kept = False
         root.kept = True
+        self.__other_map[2] = '-'
+
         if piece.piece_name in ['p', 'P']:
-            if piece.first_move:
-                self.__other_map[2] = piece.root_name[0]
-            else:
-                self.__other_map[2] = '-'
-            piece.first_move = False
+            self.__pawns_after_move_logic(piece)
+
         if piece.piece_name in ['k', 'K']:
-            piece.is_long_castling_possible = False
-            piece.is_short_castling_possible = False
-            self.__other_map[1] = self.__other_map[1].replace('KQ' if piece.color == 'w' else 'kq',
-                                                              '')
-            print(self.__other_map)
-            self.__castling_logic()
+            self.__kings_after_move_logic(piece)
+
+        if piece.piece_name in ['R', 'r']:
+            self.__rooks_after_move_logic(piece)
+
+        if self.__other_map[1] == '':
+            self.__other_map[1] = '-'
+        piece.first_move = False
+        self.__check_check(piece)
         self.write_piece_positions()
         self.__change_turn()
         self.__write_to_board_data(piece)
+
+    def __pawns_after_move_logic(self, piece):
+        if piece.first_move and piece.root_name[1][1] - piece.prev_root_name[1][1] in [2, -2]:
+            self.__other_map[2] = piece.root_name[0]
+
+    def __kings_after_move_logic(self, piece):
+        piece.is_long_castling_possible = False
+        piece.is_short_castling_possible = False
+        self.__other_map[1] = self.__other_map[1].replace('KQ' if piece.color == 'w' else 'kq', '')
+
+    def __rooks_after_move_logic(self, piece):
+        if (piece.first_move and
+                piece.root_name[1][0] - self.__all_pieces_dict['K' if piece.color == 'w'
+                                                               else 'k'][0][1][0] > 0):
+            self.__other_map[1] = self.__other_map[1].replace('K' if piece.color == 'w' else 'k', '')
+        else:
+            self.__other_map[1] = self.__other_map[1].replace('Q' if piece.color == 'w' else 'q', '')
 
     def __castling_logic(self):
         colors = {'whites': ('KQ', 'K', 'Q'), 'blacks': ('kq', 'k', 'q')}
@@ -495,8 +518,16 @@ class Chessboard:
                   else f'Short castling for {i}' if colors[i][1] in self.__other_map[1]
                   else f'Long castling for {i}' if colors[i][2] in self.__other_map[1]
                   else f'No possible castlings for {i}')
-        if self.__other_map[1] == '':
-            self.__other_map[1] = '-'
+
+    def __check_check(self, piece):
+        piece.check_movables()
+        king_color = 'K' if piece.color == 'b' else 'k'
+        if self.__all_pieces_dict[king_color][0][1] in piece.movable_roots:
+            self.__check_logic(self.__all_pieces_dict[king_color][1])
+
+    def __check_logic(self, king_coords):
+        print('Check')
+        check = Check(king_coords)
 
     def __change_turn(self):
         self.__turn = 'w' if self.__turn == 'b' else 'b'
@@ -517,6 +548,7 @@ class Chessboard:
         self.__all_roots.draw(self.__screen)
         self.__all_input_boxes.draw(self.__screen)
         self.__all_selects.draw(self.__screen)
+        self.__all_checks.draw(self.__screen)
         self.__all_marks.draw(self.__screen)
         self.__all_pieces.draw(self.__screen)
         pg.display.update()
@@ -602,7 +634,7 @@ class Mark(pg.sprite.Sprite):
                    pg.image.load(IMG_PATH + OTHER_IMG_PATH + 'available.png').convert_alpha())
         self.image = pg.transform.scale(picture, (ROOT_SIZE, ROOT_SIZE))
         if mark_type == 'available':
-            self.image.set_alpha(155)
+            self.image.set_alpha(120)
         self.rect = pg.Rect((root.rect.x, root.rect.y), (ROOT_SIZE, ROOT_SIZE))
         self.root_name = root.root_name
 
@@ -614,5 +646,16 @@ class Select(pg.sprite.Sprite):
         super().__init__()
         self.image = pg.Surface((ROOT_SIZE, ROOT_SIZE)).convert_alpha()
         self.image.fill(ACTIVE_ROOT_COLOR)
+        self.rect = pg.Rect((root.rect.x, root.rect.y), (ROOT_SIZE, ROOT_SIZE))
+        self.root_name = root.root_name
+
+
+class Check(pg.sprite.Sprite):
+    """Root selection class"""
+
+    def __init__(self, root: Root):
+        super().__init__()
+        self.image = pg.Surface((ROOT_SIZE, ROOT_SIZE)).convert_alpha()
+        self.image.fill(CHECK_ROOT_COLOR)
         self.rect = pg.Rect((root.rect.x, root.rect.y), (ROOT_SIZE, ROOT_SIZE))
         self.root_name = root.root_name

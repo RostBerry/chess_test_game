@@ -552,6 +552,7 @@ class Chessboard:
     def __unselect_all_roots(self):
         """Removes all selects from roots"""
         self.__all_selects.empty()
+        self.__all_checks.empty()
 
     def __grand_update(self):
         """Refreshes the whole scene on the screen"""

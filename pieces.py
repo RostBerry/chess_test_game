@@ -1,5 +1,5 @@
 from konfig import *
-import pygame as pg
+from common import *
 
 
 class Piece(pg.sprite.Sprite):
@@ -22,7 +22,7 @@ class Piece(pg.sprite.Sprite):
         self.movable_roots_b = [(-1, -1), (1, -1),  # Up
                                 (-1, 1), (1, 1)]  # Down
         self.movable_roots = []
-        self.all_roots = None
+        self.all_roots = Common.all_roots
         self.piece_color_break_check = False
         self.roots_dict = roots_dict
         self.pieces_positions = None
@@ -42,8 +42,8 @@ class Piece(pg.sprite.Sprite):
         else:
             self.is_moved = False
 
-    def movables_checking_loop(self, roots: list):
-        for movable in roots:
+    def movables_checking_loop(self):
+        for movable in Common.all_roots:
             offset = (self.column + movable[0], self.row + movable[1])
             if offset in self.roots_dict.values() and self.piece_color_check(offset):
                 self.movable_roots.append(offset)
@@ -63,7 +63,7 @@ class Piece(pg.sprite.Sprite):
                 offset = (offset[0] + movable[0], offset[1] + movable[1])
 
     def piece_color_check(self, offset):
-        for root in self.all_roots:
+        for root in Common.all_roots:
             if root.root_name[1] == offset and root.kept:
                 for piece in self.pieces_positions:
                     if piece[0][0] == root.root_name[0]:
@@ -74,7 +74,7 @@ class Piece(pg.sprite.Sprite):
         return True
 
     def specific_move_check(self, offset):
-        for root in self.all_roots:
+        for root in Common.all_roots:
             if root.root_name[1] == offset and root.kept:
                 for piece in self.pieces_positions:
                     if piece[0][0] == root.root_name[0]:

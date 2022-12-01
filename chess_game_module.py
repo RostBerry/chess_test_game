@@ -3,6 +3,7 @@ import pyperclip as clip
 import pygame as pg
 import board_data
 from konfig import *
+from common import *
 
 
 class Chessboard:
@@ -65,7 +66,7 @@ class Chessboard:
         total_width = self.__count * self.__size
         # Creating main board objects
         num_fields = self.__create_num_fields()
-        self.__all_roots = self.__create_all_roots()
+        Common.all_roots = self.__create_all_roots()
         num_fields_depth = num_fields[0].get_width()
         play_board_view = pg.Surface((2 * num_fields_depth + total_width,
                                      2 * num_fields_depth + total_width), pg.SRCALPHA).convert_alpha()
@@ -147,7 +148,7 @@ class Chessboard:
 
     def __apply_offset_for_roots(self, offset):
         """Moves the roots onto the board, not on the background"""
-        for root in self.__all_roots:
+        for root in Common.all_roots:
             root.rect.x += offset[0]
             root.rect.y += offset[1]
 
@@ -159,9 +160,9 @@ class Chessboard:
                 if root_value != 0:
                     # Creating a piece based on board_data and adding it to the group
                     piece = self.__create_piece(root_value, (j, i))
-                    self.__all_pieces.add(piece)
-        for piece in self.__all_pieces:
-            for root in self.__all_roots:
+                    Common.all_pieces.add(piece)
+        for piece in Common.all_pieces:
+            for root in Common.all_roots:
                 # Places the piece on the root
                 if piece.root_name[0] == root.root_name[0]:
                     piece.rect = root.rect.copy()
@@ -172,8 +173,8 @@ class Chessboard:
         """Decodes the Forsyth Edwards Notation and setups new board konfig"""
         # Separating the fen string to pieces placement and additional info
         pieces_and_other_map = self.__input_box.text.split(' ')
-        self.__pieces_map = pieces_and_other_map[0].split('/')
-        self.__other_map = pieces_and_other_map[1:]
+        Common.pieces_map = pieces_and_other_map[0].split('/')
+        Common.other_map = pieces_and_other_map[1:]
         # Replacing the board data with new pieces placement
         for row in range(len(self.__board_data)):  # Running through board data rows
             value = 0
@@ -181,29 +182,29 @@ class Chessboard:
             while value < len(self.__board_data[row]):  # Running through board data values in rows
                 offset = 0
                 try:
-                    for i in range(int(self.__pieces_map[row][value - piece_map_offset])):  # Placing the empty
+                    for i in range(int(Common.pieces_map[row][value - piece_map_offset])):  # Placing the empty
                         self.__board_data[row][value + i] = 0                              # roots if those have
                         offset = i                                                        # been found
                     value += offset
                     piece_map_offset += offset
                 except ValueError:  # Placing regular piece if the value in pieces map isn't an integer
-                    self.__board_data[row][value] = self.__pieces_map[row][value - piece_map_offset]
+                    self.__board_data[row][value] = Common.pieces_map[row][value - piece_map_offset]
                 value += 1
 
         # Saving additional info
-        self.__turn = self.__other_map[0]
-        print("White's turn" if self.__other_map[0] == 'w' else "Black's turn")
+        self.__turn = Common.other_map[0]
+        print("White's turn" if Common.other_map[0] == 'w' else "Black's turn")
         self.__castling_logic()
-        print('The last pawn move is: {}'.format('None' if '-' in self.__other_map[2] else self.__other_map[2]))
+        print('The last pawn move is: {}'.format('None' if '-' in Common.other_map[2] else Common.other_map[2]))
 
-        print(f'Halfmoves done: {self.__other_map[3]}')
+        print(f'Halfmoves done: {Common.other_map[3]}')
 
         endings = {'1': 'st', '2': 'nd', '3': 'rd'}
         print(  # What move is it
-            f'{self.__other_map[4]}{endings[self.__other_map[4]] if self.__other_map[4] in endings else "th"} move '
+            f'{Common.other_map[4]}{endings[Common.other_map[4]] if Common.other_map[4] in endings else "th"} move '
         )
 
-        self.__all_pieces.empty()
+        Common.all_pieces.empty()
         self.__setup_board()
         self.__grand_update()
 
@@ -226,7 +227,7 @@ class Chessboard:
                 fen_string += str(empty_int)
             fen_string += '/' if self.__board_data[row] != self.__board_data[-1] else ''
 
-        for info in self.__other_map:
+        for info in Common.other_map:
             fen_string += ' ' + info
 
         self.__input_box.text = fen_string  # Putting the fen string to the input bar
@@ -241,11 +242,11 @@ class Chessboard:
 
     def write_piece_positions(self):
         pieces_root_names = []
-        for piece in self.__all_pieces:
+        for piece in Common.all_pieces:
             pieces_root_names.append((piece.root_name, piece.color))
-        for piece in self.__all_pieces:
+        for piece in Common.all_pieces:
             piece.pieces_positions = tuple(pieces_root_names)
-            piece.all_roots = self.__all_roots
+            piece.all_roots = Common.all_roots
 
     def __to_root_name(self, board_data_coord: tuple):
         """Returns the name of the root"""
@@ -254,7 +255,7 @@ class Chessboard:
 
     def __get_root(self, pos: tuple):
         """Returns the root below the mouse position"""
-        for root in self.__all_roots:
+        for root in Common.all_roots:
             if root.rect.collidepoint(pos):
                 return root
         return None
@@ -267,9 +268,8 @@ class Chessboard:
 
     def __get_piece_on_click(self, root):
         """Returns the clicked piece"""
-        for piece in self.__all_pieces:
+        for piece in Common.all_pieces:
             if piece.root_name[0] == root.root_name[0]:
-                print('Piece color:', piece.color, 'Turn:', self.__turn)
                 if piece.color == self.__turn and self.__selected_piece is None:
                     if self.__taken_piece is None:
                         return piece
@@ -279,12 +279,12 @@ class Chessboard:
         return None
 
     def __get_piece_pos_by_name(self, name):
-        for finding_piece in self.__all_pieces:
+        for finding_piece in Common.all_pieces:
             if finding_piece.piece_name == name:
                 return finding_piece.root_name[1]
 
     def __get_piece_by_piece_pos(self, piece_pos):
-        for piece in self.__all_pieces:
+        for piece in Common.all_pieces:
             if piece.root_name[1] == piece_pos:
                 return piece
 
@@ -412,9 +412,9 @@ class Chessboard:
         """Draws a green circle on the clicked root"""
         if not root.mark:
             mark = Mark(root, 'mark')
-            self.__all_marks.add(mark)
+            Common.all_marks.add(mark)
         else:
-            for mark in self.__all_marks:
+            for mark in Common.all_marks:
                 if mark.root_name[0] == root.root_name[0]:
                     mark.kill()
                     break
@@ -429,18 +429,17 @@ class Chessboard:
         piece.movable_roots = []
         piece.check_movables()
         for available in piece.movable_roots:
-            print('piece root name:', piece.root_name[1], 'available:', available)
             moving_dist = (available[0], available[1])
-            for root in self.__all_roots:
+            for root in Common.all_roots:
                 if root.root_name[1] == moving_dist:
                     available_root = Mark(root, 'available')
-                    self.__all_marks.add(available_root)
+                    Common.all_marks.add(available_root)
 
     def __move_or_select_piece(self, root):
         self.__unselect_all_roots()
         if self.__taken_piece is not None:
             if root.root_name[1] in self.__taken_piece.movable_roots:
-                for piece in self.__all_pieces:
+                for piece in Common.all_pieces:
                     if piece.root_name == root.root_name:
                         self.kill_piece(piece)
                 self.__taken_piece.move_to_root(root)
@@ -456,7 +455,7 @@ class Chessboard:
         elif self.__selected_piece is not None:
             self.__unmark_all_marks()
             if root.root_name[1] in self.__selected_piece.movable_roots:
-                for piece in self.__all_pieces:
+                for piece in Common.all_pieces:
                     if piece.root_name == root.root_name:
                         self.kill_piece(piece)
                 self.__selected_piece.move_to_root(root)
@@ -468,7 +467,7 @@ class Chessboard:
 
     def kill_piece(self, piece):
         piece.kill()
-        self.__all_pieces.remove(piece)
+        Common.all_pieces.remove(piece)
 
     def __write_to_board_data(self, piece):
         value = letters.find(piece.root_name[0][0])
@@ -484,7 +483,7 @@ class Chessboard:
         self.__unmark_all_marks()
         self.__pressed_root.kept = False
         root.kept = True
-        self.__other_map[2] = '-'
+        Common.other_map[2] = '-'
 
         if piece.piece_name in ['p', 'P']:
             self.__pawns_after_move_logic(piece)
@@ -495,58 +494,56 @@ class Chessboard:
         if piece.piece_name in ['R', 'r']:
             self.__rooks_after_move_logic(piece)
 
-        if self.__other_map[1] == '':
-            self.__other_map[1] = '-'
+        if Common.other_map[1] == '':
+            Common.other_map[1] = '-'
         piece.first_move = False
         self.__check_check(piece)
         self.write_piece_positions()
         self.__change_turn()
         self.__write_to_board_data(piece)
 
-    def __pawns_after_move_logic(self, piece):
-        if piece.first_move and piece.root_name[1][1] - piece.prev_root_name[1][1] in [2, -2]:
-            self.__other_map[2] = piece.root_name[0]
+    def __pawns_after_move_logic(self, pawn):
+        if pawn.first_move and pawn.root_name[1][1] - pawn.prev_root_name[1][1] in [2, -2]:
+            Common.other_map[2] = pawn.root_name[0]
 
     def __kings_after_move_logic(self, piece):
         piece.is_long_castling_possible = False
         piece.is_short_castling_possible = False
-        self.__other_map[1] = self.__other_map[1].replace('KQ' if piece.color == 'w' else 'kq', '')
+        Common.other_map[1] = Common.other_map[1].replace('KQ' if piece.color == 'w' else 'kq', '')
 
     def __rooks_after_move_logic(self, piece):
         if (piece.first_move and
                 piece.root_name[1][0] - self.__get_piece_pos_by_name('K' if piece.color == 'w'
                                                                  else 'k') > 0):
-            self.__other_map[1] = self.__other_map[1].replace('K' if piece.color == 'w' else 'k', '')
+            Common.other_map[1] = Common.other_map[1].replace('K' if piece.color == 'w' else 'k', '')
         else:
-            self.__other_map[1] = self.__other_map[1].replace('Q' if piece.color == 'w' else 'q', '')
+            Common.other_map[1] = Common.other_map[1].replace('Q' if piece.color == 'w' else 'q', '')
 
     def __castling_logic(self):
         colors = {'whites': ('KQ', 'K', 'Q'), 'blacks': ('kq', 'k', 'q')}
         for i in colors:  # What castlings can be done
-            print(f'Both castlings possible for {i}' if colors[i][0] in self.__other_map[1]
-                  else f'Short castling for {i}' if colors[i][1] in self.__other_map[1]
-                  else f'Long castling for {i}' if colors[i][2] in self.__other_map[1]
+            print(f'Both castlings possible for {i}' if colors[i][0] in Common.other_map[1]
+                  else f'Short castling for {i}' if colors[i][1] in Common.other_map[1]
+                  else f'Long castling for {i}' if colors[i][2] in Common.other_map[1]
                   else f'No possible castlings for {i}')
 
     def __check_check(self, piece):
         piece.check_movables()
         king_pos = self.__get_piece_pos_by_name('K' if piece.color == 'b' else 'k')
         if king_pos in piece.movable_roots:
-            self.__check_logic(king_pos)
+            self.__check_logic()
 
-    def __check_logic(self, king_coords):
+    def __check_logic(self):
         print('Check')
-        check = Check(self.__get_piece_by_piece_pos(king_coords))
-        self.__all_checks.add(check)
 
     def __change_turn(self):
         self.__turn = 'w' if self.__turn == 'b' else 'b'
-        self.__other_map[0] = self.__turn
+        Common.other_map[0] = self.__turn
 
     def __unmark_all_marks(self):
         """Removes all marks from roots"""
-        self.__all_marks.empty()
-        for root in self.__all_roots:
+        Common.all_marks.empty()
+        for root in Common.all_roots:
             root.mark = False
 
     def __unselect_all_roots(self):
@@ -556,12 +553,12 @@ class Chessboard:
 
     def __grand_update(self):
         """Refreshes the whole scene on the screen"""
-        self.__all_roots.draw(self.__screen)
+        Common.all_roots.draw(self.__screen)
         self.__all_input_boxes.draw(self.__screen)
         self.__all_selects.draw(self.__screen)
         self.__all_checks.draw(self.__screen)
-        self.__all_marks.draw(self.__screen)
-        self.__all_pieces.draw(self.__screen)
+        Common.all_marks.draw(self.__screen)
+        Common.all_pieces.draw(self.__screen)
         pg.display.update()
 
 
@@ -657,16 +654,5 @@ class Select(pg.sprite.Sprite):
         super().__init__()
         self.image = pg.Surface((ROOT_SIZE, ROOT_SIZE)).convert_alpha()
         self.image.fill(ACTIVE_ROOT_COLOR)
-        self.rect = pg.Rect((root.rect.x, root.rect.y), (ROOT_SIZE, ROOT_SIZE))
-        self.root_name = root.root_name
-
-
-class Check(pg.sprite.Sprite):
-    """Root selection class"""
-
-    def __init__(self, root: Root):
-        super().__init__()
-        self.image = pg.Surface((ROOT_SIZE, ROOT_SIZE)).convert_alpha()
-        self.image.fill(CHECK_ROOT_COLOR)
         self.rect = pg.Rect((root.rect.x, root.rect.y), (ROOT_SIZE, ROOT_SIZE))
         self.root_name = root.root_name

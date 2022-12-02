@@ -42,8 +42,8 @@ class Piece(pg.sprite.Sprite):
         else:
             self.is_moved = False
 
-    def movables_checking_loop(self):
-        for movable in Common.all_roots:
+    def movables_checking_loop(self, movables):
+        for movable in movables:
             offset = (self.column + movable[0], self.row + movable[1])
             if offset in self.roots_dict.values() and self.piece_color_check(offset):
                 self.movable_roots.append(offset)
@@ -164,8 +164,8 @@ class Pawn(Piece):
     def __init__(self, root_size: int, color: str, root: str, roots_dict):
         super().__init__(root_size, color, root, '_pawn.png', roots_dict)
         self.piece_name = 'P' if color == 'w' else 'p'
-        self.able_to_destroy_left = False
-        self.able_to_destroy_right = False
+        self.taking_on_the_pass = None
+        self.passing_pawn_pos = None
 
     def check_movables(self):
 
@@ -181,10 +181,18 @@ class Pawn(Piece):
             self.movable_roots.append(move)
 
         move = (self.column + 1, self.row - 1) if self.color == 'w' else (self.column - 1, self.row + 1)
+        pawn_passing_move = (move[0], move[1] + (1 if self.color == 'w' else -1))
+        pawn_passing_check = (not self.specific_move_check(pawn_passing_move)
+                              and self.piece_color_check(pawn_passing_move)
+                              and Common.other_map[2] != '-')
         if (move in self.roots_dict.values()
-                and not self.specific_move_check(move)
+                and (not self.specific_move_check(move)
+                     or pawn_passing_check)
                 and self.piece_color_check(move)):
             self.movable_roots.append(move)
+            if pawn_passing_check:
+                self.taking_on_the_pass = move
+                self.passing_pawn_pos = pawn_passing_move
 
         move = (self.column - 1, self.row - 1) if self.color == 'w' else (self.column + 1, self.row + 1)
         if (move in self.roots_dict.values()

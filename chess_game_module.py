@@ -502,9 +502,13 @@ class Chessboard:
         self.__change_turn()
         self.__write_to_board_data(piece)
 
-    def __pawns_after_move_logic(self, pawn):
+    def __pawns_after_move_logic(self, pawn: Pawn):
+        if pawn.root_name[1] == pawn.taking_on_the_pass:
+            self.kill_piece(self.__get_piece_by_piece_pos(pawn.passing_pawn_pos))
         if pawn.first_move and pawn.root_name[1][1] - pawn.prev_root_name[1][1] in [2, -2]:
             Common.other_map[2] = pawn.root_name[0]
+        pawn.taking_ont_the_pass = None
+        pawn.passing_pawn_pos = None
 
     def __kings_after_move_logic(self, piece):
         piece.is_long_castling_possible = False

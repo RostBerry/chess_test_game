@@ -1,6 +1,5 @@
 from chess_game_module import *
 
-
 clock = pg.time.Clock()
 screen = pg.display.set_mode(WINDOW_SIZE)
 pg.display.set_caption('Chess Session', 'Super Realistic Mega Sim')

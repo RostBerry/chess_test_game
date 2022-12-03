@@ -1,6 +1,5 @@
 from pieces import *
 import pyperclip as clip
-import pygame as pg
 import board_data
 from konfig import *
 from common import *
@@ -57,8 +56,10 @@ class Chessboard:
 
     def __prepare_screen(self):
         """Draws background"""
-        background_img = pg.image.load(IMG_PATH + STATIC_IMG_PATH + BACKGROUND_IMG)
-        background_img = pg.transform.scale(background_img, WINDOW_SIZE)
+        background_img = Image.open(IMG_PATH + STATIC_IMG_PATH + BACKGROUND_IMG).resize(WINDOW_SIZE)
+        background_img = pg.image.fromstring(background_img.tobytes(),
+                                             background_img.size,
+                                             background_img.mode)
         self.__screen.blit(background_img, (0, 0))
 
     def __draw_play_board(self):
@@ -71,10 +72,13 @@ class Chessboard:
         play_board_view = pg.Surface((2 * num_fields_depth + total_width,
                                      2 * num_fields_depth + total_width), pg.SRCALPHA).convert_alpha()
 
-        board_background_img = pg.image.load(IMG_PATH + STATIC_IMG_PATH + BOARD_BACKGROUND_IMG)
-        board_background_img = pg.transform.scale(board_background_img,
-                                                  (play_board_view.get_width(),
-                                                   play_board_view.get_height()))
+        board_background_img = Image.open(IMG_PATH +
+                                          STATIC_IMG_PATH +
+                                          BOARD_BACKGROUND_IMG).resize((play_board_view.get_width(),
+                                                                        play_board_view.get_height()))
+        board_background_img = pg.image.fromstring(board_background_img.tobytes(),
+                                                   board_background_img.size,
+                                                   board_background_img.mode)
 
         # Bind created objects to the main object
         play_board_view.blit(board_background_img, (0, 0))
@@ -260,6 +264,13 @@ class Chessboard:
                 return root
         return None
 
+    def __get_root_by_pos(self, pos: tuple):
+        """Returns the root by (x, y) sample"""
+        for root in Common.all_roots:
+            if root.root_name[1] == pos:
+                return root
+        return None
+
     def __get_input_box(self, pos: tuple):
         """Returns the input box from mouse position"""
         if self.__input_box.rect.collidepoint(pos):
@@ -427,6 +438,7 @@ class Chessboard:
 
     def __draw_available_roots(self, piece: Piece):
         piece.movable_roots = []
+        piece.takeable_roots = []
         piece.check_movables()
         for available in piece.movable_roots:
             moving_dist = (available[0], available[1])
@@ -434,6 +446,12 @@ class Chessboard:
                 if root.root_name[1] == moving_dist:
                     available_root = Mark(root, 'available')
                     Common.all_marks.add(available_root)
+        for takeable in piece.takeable_roots:
+            moving_dist = (takeable[0], takeable[1])
+            for root in Common.all_roots:
+                if root.root_name[1] == moving_dist:
+                    takeable_root = Mark(root, 'takeable')
+                    Common.all_marks.add(takeable_root)
 
     def __move_or_select_piece(self, root):
         self.__unselect_all_roots()
@@ -510,18 +528,22 @@ class Chessboard:
         pawn.taking_ont_the_pass = None
         pawn.passing_pawn_pos = None
 
-    def __kings_after_move_logic(self, piece):
-        piece.is_long_castling_possible = False
-        piece.is_short_castling_possible = False
-        Common.other_map[1] = Common.other_map[1].replace('KQ' if piece.color == 'w' else 'kq', '')
+    def __kings_after_move_logic(self, king: King):
+        king.is_long_castling_possible = False
+        king.is_short_castling_possible = False
+        Common.other_map[1] = Common.other_map[1].replace('KQ' if king.color == 'w' else 'kq', '')
+        if king.root_name[1] in king.castling_roots:
+            self.__do_castle(king, 'Long' if king.castling_roots[0][0] -
+                             king.prev_root_name[1][0] < 0 else 'Short')
+        king.castling_roots = []
 
-    def __rooks_after_move_logic(self, piece):
-        if (piece.first_move and
-                piece.root_name[1][0] - self.__get_piece_pos_by_name('K' if piece.color == 'w'
-                                                                 else 'k') > 0):
-            Common.other_map[1] = Common.other_map[1].replace('K' if piece.color == 'w' else 'k', '')
+    def __rooks_after_move_logic(self, rook: Rook):
+        if (rook.first_move and
+                rook.root_name[1][0] -
+                self.__get_piece_pos_by_name('K' if rook.color == 'w' else 'k')[0] > 0):
+            Common.other_map[1] = Common.other_map[1].replace('K' if rook.color == 'w' else 'k', '')
         else:
-            Common.other_map[1] = Common.other_map[1].replace('Q' if piece.color == 'w' else 'q', '')
+            Common.other_map[1] = Common.other_map[1].replace('Q' if rook.color == 'w' else 'q', '')
 
     def __castling_logic(self):
         colors = {'whites': ('KQ', 'K', 'Q'), 'blacks': ('kq', 'k', 'q')}
@@ -530,6 +552,19 @@ class Chessboard:
                   else f'Short castling for {i}' if colors[i][1] in Common.other_map[1]
                   else f'Long castling for {i}' if colors[i][2] in Common.other_map[1]
                   else f'No possible castlings for {i}')
+
+    def __do_castle(self, king: King, castling_type: str):
+        for piece in Common.all_pieces:
+            if (piece.piece_name == ('R' if king.color == 'w' else 'r')
+                    and (piece.root_name[1][0] - king.prev_root_name[1][0] < 0
+                         if castling_type == 'Long'
+                         else piece.root_name[1][0] - king.prev_root_name[1][0] > 0)):
+                rook = piece
+        castling_root = self.__get_root_by_pos((king.root_name[1][0] +
+                                                (-1 if castling_type == 'Short' else 1),
+                                                king.root_name[1][1]))
+        rook.move_to_root(castling_root)
+        self.__write_to_board_data(rook)
 
     def __check_check(self, piece):
         piece.check_movables()
@@ -628,8 +663,8 @@ class Root(pg.sprite.Sprite):
         x, y = coordinates
         self.color = ROOT_COLORS[color_order]
         self.root_name = name
-        self.image = pg.image.load(IMG_PATH + self.color)
-        self.image = pg.transform.scale(self.image, (size, size))
+        image = Image.open(IMG_PATH + self.color).resize((size, size))
+        self.image = pg.image.fromstring(image.tobytes(), image.size, image.mode)
         self.rect = pg.Rect(x * size, y * size, size, size)
         self.mark = False
         self.is_selected = False
@@ -641,11 +676,13 @@ class Mark(pg.sprite.Sprite):
 
     def __init__(self, root: Root, mark_type):
         super().__init__()
-        picture = (pg.image.load(IMG_PATH + OTHER_IMG_PATH + 'mark.png').convert_alpha()
-                   if mark_type == 'mark' else
-                   pg.image.load(IMG_PATH + OTHER_IMG_PATH + 'available.png').convert_alpha())
-        self.image = pg.transform.scale(picture, (ROOT_SIZE, ROOT_SIZE))
-        if mark_type == 'available':
+        if mark_type in ['mark', 'takeable']:
+            picture_name = 'mark.png'
+        elif mark_type == 'available':
+            picture_name = 'available.png'
+        picture = Image.open(IMG_PATH + OTHER_IMG_PATH + picture_name).resize((ROOT_SIZE, ROOT_SIZE))
+        self.image = (pg.image.fromstring(picture.tobytes(), picture.size, picture.mode).convert_alpha())
+        if mark_type in ['available', 'takeable']:
             self.image.set_alpha(120)
         self.rect = pg.Rect((root.rect.x, root.rect.y), (ROOT_SIZE, ROOT_SIZE))
         self.root_name = root.root_name

@@ -1,15 +1,20 @@
 from konfig import *
 from common import *
+from PIL import Image
 
 
+# noinspection PyTypeChecker
 class Piece(pg.sprite.Sprite):
     """Main piece class"""
 
     def __init__(self, root_size: int, color: str, root_name: str, file_postfix: str, roots_dict: dict):
         super().__init__()
-        image = pg.image.load(IMG_PATH + PIECE_IMG_PATH + color + file_postfix).convert_alpha()
-        self.image = pg.transform.scale(image, (root_size, root_size))
-        self.rect = self.image.get_rect()
+        image = Image.open(IMG_PATH +
+                           PIECE_IMG_PATH +
+                           color +
+                           file_postfix).resize((ROOT_SIZE, ROOT_SIZE))
+        self.rect = image.size
+        self.image = pg.image.fromstring(image.tobytes(), image.size, image.mode).convert_alpha()
         self.color = color
         self.prev_root_name = None
         self.root_name = root_name
@@ -22,6 +27,7 @@ class Piece(pg.sprite.Sprite):
         self.movable_roots_b = [(-1, -1), (1, -1),  # Up
                                 (-1, 1), (1, 1)]  # Down
         self.movable_roots = []
+        self.takeable_roots = []
         self.all_roots = Common.all_roots
         self.piece_color_break_check = False
         self.roots_dict = roots_dict
@@ -47,6 +53,10 @@ class Piece(pg.sprite.Sprite):
             offset = (self.column + movable[0], self.row + movable[1])
             if offset in self.roots_dict.values() and self.piece_color_check(offset):
                 self.movable_roots.append(offset)
+        for root in self.movable_roots:
+            for piece in Common.all_pieces:
+                if piece.root_name[1] == root and piece.color != self.color:
+                    self.takeable_roots.append(root)
 
     def movable_checking_loop_with_continuing(self, movable_roots):
         for movable in movable_roots:
@@ -56,6 +66,7 @@ class Piece(pg.sprite.Sprite):
                         and self.piece_color_check(offset)):
                     self.movable_roots.append(offset)
                     if self.piece_color_break_check:
+                        self.takeable_roots.append(offset)
                         self.piece_color_break_check = False
                         break
                 else:
@@ -95,6 +106,7 @@ class King(Piece):
         self.piece_name = 'K' if color == 'w' else 'k'
         self.is_short_castling_possible = True
         self.is_long_castling_possible = True
+        self.castling_roots = []
 
     def check_movables(self):
         self.movables_checking_loop(self.movable_roots_r + self.movable_roots_b)
@@ -104,11 +116,13 @@ class King(Piece):
                 (self.column - 2, self.row) in self.roots_dict.values()
                 and self.piece_color_check((self.column - 2, self.row))):
             self.movable_roots.append((self.column - 2, self.row))
+            self.castling_roots.append((self.column - 2, self.row))
         if ((self.column + 1, self.row) in self.movable_roots and
                 self.is_short_castling_possible and
                 (self.column + 2, self.row) in self.roots_dict.values()
                 and self.piece_color_check((self.column + 2, self.row))):
             self.movable_roots.append((self.column + 2, self.row))
+            self.castling_roots.append((self.column + 2, self.row))
         self.remove_leak_movables()
 
 
@@ -195,9 +209,17 @@ class Pawn(Piece):
                 self.passing_pawn_pos = pawn_passing_move
 
         move = (self.column - 1, self.row - 1) if self.color == 'w' else (self.column + 1, self.row + 1)
+        pawn_passing_move = (move[0], move[1] + (1 if self.color == 'w' else -11))
+        pawn_passing_check = (not self.specific_move_check(pawn_passing_move)
+                              and self.piece_color_check(pawn_passing_move)
+                              and Common.other_map[2] != '-')
         if (move in self.roots_dict.values()
-                and not self.specific_move_check(move)
+                and (not self.specific_move_check(move)
+                     or pawn_passing_check)
                 and self.piece_color_check(move)):
             self.movable_roots.append(move)
+            if pawn_passing_check:
+                self.taking_on_the_pass = move
+                self.passing_pawn_pos = pawn_passing_move
 
         self.remove_leak_movables()

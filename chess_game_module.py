@@ -3,6 +3,7 @@ import pyperclip as clip
 import board_data
 from konfig import *
 from common import *
+import random
 
 
 class Chessboard:
@@ -53,6 +54,11 @@ class Chessboard:
         pg.mixer.music.load(MUSIC_PATH + BACKGROUND_MUSIC)
         pg.mixer.music.set_volume(0.3)
         pg.mixer.music.play(-1)
+
+    def __play_move_sound(self):
+        """Activates when a piece have been moved"""
+        sound = pg.mixer.Sound(MUSIC_PATH + MOVE_SOUND + str(random.randint(1, 7)) + '.ogg')
+        sound.play()
 
     def __prepare_screen(self):
         """Draws background"""
@@ -242,7 +248,7 @@ class Chessboard:
         root_name = self.__to_root_name(board_data_coord)
         piece_tuple = self.__pieces[piece_sym]
         class_name = globals()[piece_tuple[0]]
-        return class_name(self.__size, piece_tuple[1], root_name, self.roots_dict)
+        return class_name(piece_tuple[1], root_name, self.roots_dict)
 
     def write_piece_positions(self):
         pieces_root_names = []
@@ -456,7 +462,7 @@ class Chessboard:
     def __move_or_select_piece(self, root):
         self.__unselect_all_roots()
         if self.__taken_piece is not None:
-            if root.root_name[1] in self.__taken_piece.movable_roots:
+            if root.root_name[1] in self.__taken_piece.movable_roots + self.__taken_piece.takeable_roots:
                 for piece in Common.all_pieces:
                     if piece.root_name == root.root_name:
                         self.kill_piece(piece)
@@ -472,7 +478,7 @@ class Chessboard:
             self.__taken_piece = None
         elif self.__selected_piece is not None:
             self.__unmark_all_marks()
-            if root.root_name[1] in self.__selected_piece.movable_roots:
+            if root.root_name[1] in self.__selected_piece.movable_roots + self.__selected_piece.takeable_roots:
                 for piece in Common.all_pieces:
                     if piece.root_name == root.root_name:
                         self.kill_piece(piece)
@@ -490,6 +496,7 @@ class Chessboard:
     def __write_to_board_data(self, piece):
         value = letters.find(piece.root_name[0][0])
         row = self.__count - int(piece.root_name[0][1])
+        print(piece.prev_root_name)
         prev_value = letters.find(piece.prev_root_name[0][0])
         prev_row = self.__count - int(piece.prev_root_name[0][1])
         self.__board_data[prev_row][prev_value] = 0
@@ -498,6 +505,7 @@ class Chessboard:
         self.__write_fen_from_board()
 
     def __after_move_preps(self, piece, root):
+        self.__play_move_sound()
         self.__unmark_all_marks()
         self.__pressed_root.kept = False
         root.kept = True
@@ -538,12 +546,14 @@ class Chessboard:
         king.castling_roots = []
 
     def __rooks_after_move_logic(self, rook: Rook):
-        if (rook.first_move and
-                rook.root_name[1][0] -
-                self.__get_piece_pos_by_name('K' if rook.color == 'w' else 'k')[0] > 0):
-            Common.other_map[1] = Common.other_map[1].replace('K' if rook.color == 'w' else 'k', '')
-        else:
-            Common.other_map[1] = Common.other_map[1].replace('Q' if rook.color == 'w' else 'q', '')
+        king_pos = self.__get_piece_pos_by_name('K' if rook.color == 'w' else 'k')
+        if king_pos is not None:
+            if (rook.first_move and
+                    rook.root_name[1][0] -
+                    king_pos[0] > 0):
+                Common.other_map[1] = Common.other_map[1].replace('K' if rook.color == 'w' else 'k', '')
+            else:
+                Common.other_map[1] = Common.other_map[1].replace('Q' if rook.color == 'w' else 'q', '')
 
     def __castling_logic(self):
         colors = {'whites': ('KQ', 'K', 'Q'), 'blacks': ('kq', 'k', 'q')}
@@ -554,17 +564,22 @@ class Chessboard:
                   else f'No possible castlings for {i}')
 
     def __do_castle(self, king: King, castling_type: str):
+        rook = None
         for piece in Common.all_pieces:
+            print('prob rook coords', piece.root_name, piece.piece_name)
+            print('prev', king.prev_root_name)
             if (piece.piece_name == ('R' if king.color == 'w' else 'r')
                     and (piece.root_name[1][0] - king.prev_root_name[1][0] < 0
                          if castling_type == 'Long'
                          else piece.root_name[1][0] - king.prev_root_name[1][0] > 0)):
+                print('found')
                 rook = piece
         castling_root = self.__get_root_by_pos((king.root_name[1][0] +
                                                 (-1 if castling_type == 'Short' else 1),
                                                 king.root_name[1][1]))
-        rook.move_to_root(castling_root)
-        self.__write_to_board_data(rook)
+        if rook is not None:
+            rook.move_to_root(castling_root)
+            self.__write_to_board_data(rook)
 
     def __check_check(self, piece):
         piece.check_movables()
@@ -676,11 +691,7 @@ class Mark(pg.sprite.Sprite):
 
     def __init__(self, root: Root, mark_type):
         super().__init__()
-        if mark_type in ['mark', 'takeable']:
-            picture_name = 'mark.png'
-        elif mark_type == 'available':
-            picture_name = 'available.png'
-        picture = Image.open(IMG_PATH + OTHER_IMG_PATH + picture_name).resize((ROOT_SIZE, ROOT_SIZE))
+        picture = Image.open(IMG_PATH + OTHER_IMG_PATH + mark_type + '.png').resize((ROOT_SIZE, ROOT_SIZE))
         self.image = (pg.image.fromstring(picture.tobytes(), picture.size, picture.mode).convert_alpha())
         if mark_type in ['available', 'takeable']:
             self.image.set_alpha(120)

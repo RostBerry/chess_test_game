@@ -2,7 +2,7 @@ FPS = 60
 WINDOW_SIZE = (1280, 720)
 BACKGROUND = (200, 100, 100)
 ROOT_COUNT = 8
-ROOT_SIZE = 60
+ROOT_SIZE = 70
 ROOT_SUBSCRIPT = True
 FONT_CHESSBOARD_PATH = 'assets/fonts/arial_black.ttf'
 FONT_CHESSBOARD_SIZE = 22
@@ -18,6 +18,7 @@ BACKGROUND_IMG = 'wood_planks.jpg'
 BOARD_BACKGROUND_IMG = 'black_root.jpg'
 MUSIC_PATH = 'assets/music/'
 BACKGROUND_MUSIC = 'back/kalinka_not_russian.mp3'
+MOVE_SOUND = 'effects/move'
 
 PIECE_IMG_PATH = 'pieces/'
 letters = 'abcdefghijklmnopqrstuvwxyz'

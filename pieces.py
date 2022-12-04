@@ -7,7 +7,7 @@ from PIL import Image
 class Piece(pg.sprite.Sprite):
     """Main piece class"""
 
-    def __init__(self, root_size: int, color: str, root_name: str, file_postfix: str, roots_dict: dict):
+    def __init__(self, color: str, root_name: str, file_postfix: str, roots_dict: dict):
         super().__init__()
         image = Image.open(IMG_PATH +
                            PIECE_IMG_PATH +
@@ -53,10 +53,13 @@ class Piece(pg.sprite.Sprite):
             offset = (self.column + movable[0], self.row + movable[1])
             if offset in self.roots_dict.values() and self.piece_color_check(offset):
                 self.movable_roots.append(offset)
+        new_movables = self.movable_roots.copy()
         for root in self.movable_roots:
             for piece in Common.all_pieces:
                 if piece.root_name[1] == root and piece.color != self.color:
                     self.takeable_roots.append(root)
+                    new_movables.remove(root)
+        self.movable_roots = new_movables
 
     def movable_checking_loop_with_continuing(self, movable_roots):
         for movable in movable_roots:
@@ -67,6 +70,7 @@ class Piece(pg.sprite.Sprite):
                     self.movable_roots.append(offset)
                     if self.piece_color_break_check:
                         self.takeable_roots.append(offset)
+                        self.movable_roots.remove(offset)
                         self.piece_color_break_check = False
                         break
                 else:
@@ -92,17 +96,14 @@ class Piece(pg.sprite.Sprite):
                         return False
         return True
 
-    def remove_leak_movables(self):
-        self.remove_duplicates_in_movables()
-
     def remove_duplicates_in_movables(self):
         self.movable_roots = list(dict.fromkeys(self.movable_roots))
 
 
 # noinspection PyTypeChecker
 class King(Piece):
-    def __init__(self, root_size: int, color: str, root: str, roots_dict):
-        super().__init__(root_size, color, root, '_king.png', roots_dict)
+    def __init__(self, color: str, root: str, roots_dict):
+        super().__init__(color, root, '_king.png', roots_dict)
         self.piece_name = 'K' if color == 'w' else 'k'
         self.is_short_castling_possible = True
         self.is_long_castling_possible = True
@@ -117,66 +118,68 @@ class King(Piece):
                 and self.piece_color_check((self.column - 2, self.row))):
             self.movable_roots.append((self.column - 2, self.row))
             self.castling_roots.append((self.column - 2, self.row))
+
         if ((self.column + 1, self.row) in self.movable_roots and
                 self.is_short_castling_possible and
                 (self.column + 2, self.row) in self.roots_dict.values()
                 and self.piece_color_check((self.column + 2, self.row))):
             self.movable_roots.append((self.column + 2, self.row))
             self.castling_roots.append((self.column + 2, self.row))
-        self.remove_leak_movables()
+
+        self.remove_duplicates_in_movables()
 
 
 # noinspection PyTypeChecker
 class Queen(Piece):
-    def __init__(self, root_size: int, color: str, root: str, roots_dict):
-        super().__init__(root_size, color, root, '_queen.png', roots_dict)
+    def __init__(self, color: str, root: str, roots_dict):
+        super().__init__(color, root, '_queen.png', roots_dict)
         self.piece_name = 'Q' if color == 'w' else 'q'
 
     def check_movables(self):
         self.movable_checking_loop_with_continuing(self.movable_roots_b)
         self.movable_checking_loop_with_continuing(self.movable_roots_r)
-        self.remove_leak_movables()
+        self.remove_duplicates_in_movables()
 
 
 # noinspection PyTypeChecker
 class Rook(Piece):
-    def __init__(self, root_size: int, color: str, root: str, roots_dict):
-        super().__init__(root_size, color, root, '_rook.png', roots_dict)
+    def __init__(self, color: str, root: str, roots_dict):
+        super().__init__(color, root, '_rook.png', roots_dict)
         self.piece_name = 'R' if color == 'w' else 'r'
 
     def check_movables(self):
         self.movable_checking_loop_with_continuing(self.movable_roots_r)
-        self.remove_leak_movables()
+        self.remove_duplicates_in_movables()
 
 
 # noinspection PyTypeChecker
 class Bishop(Piece):
-    def __init__(self, root_size: int, color: str, root: str, roots_dict):
-        super().__init__(root_size, color, root, '_bishop.png', roots_dict)
+    def __init__(self, color: str, root: str, roots_dict):
+        super().__init__(color, root, '_bishop.png', roots_dict)
         self.piece_name = 'B' if color == 'w' else 'b'
 
     def check_movables(self):
         self.movable_checking_loop_with_continuing(self.movable_roots_b)
-        self.remove_leak_movables()
+        self.remove_duplicates_in_movables()
 
 
 # noinspection PyTypeChecker
 class Knight(Piece):
-    def __init__(self, root_size: int, color: str, root: str, roots_dict):
-        super().__init__(root_size, color, root, '_knight.png', roots_dict)
+    def __init__(self, color: str, root: str, roots_dict):
+        super().__init__(color, root, '_knight.png', roots_dict)
         self.piece_name = 'N' if color == 'w' else 'n'
         self.movable_roots_n = [(-1, -2), (1, -2), (-2, -1), (2, -1),  # Up
                                 (-2, 1), (2, 1), (-1, 2), (1, 2)]  # Down
 
     def check_movables(self):
         self.movables_checking_loop(self.movable_roots_n)
-        self.remove_leak_movables()
+        self.remove_duplicates_in_movables()
 
 
 # noinspection PyTypeChecker
 class Pawn(Piece):
-    def __init__(self, root_size: int, color: str, root: str, roots_dict):
-        super().__init__(root_size, color, root, '_pawn.png', roots_dict)
+    def __init__(self, color: str, root: str, roots_dict):
+        super().__init__(color, root, '_pawn.png', roots_dict)
         self.piece_name = 'P' if color == 'w' else 'p'
         self.taking_on_the_pass = None
         self.passing_pawn_pos = None
@@ -203,7 +206,7 @@ class Pawn(Piece):
                 and (not self.specific_move_check(move)
                      or pawn_passing_check)
                 and self.piece_color_check(move)):
-            self.movable_roots.append(move)
+            self.takeable_roots.append(move)
             if pawn_passing_check:
                 self.taking_on_the_pass = move
                 self.passing_pawn_pos = pawn_passing_move
@@ -217,9 +220,9 @@ class Pawn(Piece):
                 and (not self.specific_move_check(move)
                      or pawn_passing_check)
                 and self.piece_color_check(move)):
-            self.movable_roots.append(move)
+            self.takeable_roots.append(move)
             if pawn_passing_check:
                 self.taking_on_the_pass = move
                 self.passing_pawn_pos = pawn_passing_move
 
-        self.remove_leak_movables()
+        self.remove_duplicates_in_movables()

@@ -36,6 +36,7 @@ class Chessboard:
         self.__released_root = None
         self.__selected_piece = None
         self.__taken_piece = None
+        self.__prev_piece_value = None
         self.__clicked = False
         self.__can_drag = False
         self.__turn = None
@@ -353,6 +354,8 @@ class Chessboard:
                 if self.__taken_piece is not None:
                     self.__select_root(self.__pressed_root)
                     self.__pressed_root.is_selected ^= True
+                    if self.__taken_piece.piece_name in ['k', 'K']:
+                        self.__prev_piece_value = self.__taken_piece.root_name
                     self.__draw_available_roots(self.__taken_piece)
                     # Checking if the piece wouldn't move outside the clipped area
                     if self.__fits_in_border(self.__taken_piece, pos):
@@ -445,7 +448,7 @@ class Chessboard:
     def __draw_available_roots(self, piece: Piece):
         piece.movable_roots = []
         piece.takeable_roots = []
-        piece.check_movables()
+        piece.check_movables(False)
         for available in piece.movable_roots:
             moving_dist = (available[0], available[1])
             for root in Common.all_roots:
@@ -541,9 +544,10 @@ class Chessboard:
         king.is_short_castling_possible = False
         Common.other_map[1] = Common.other_map[1].replace('KQ' if king.color == 'w' else 'kq', '')
         if king.root_name[1] in king.castling_roots:
-            self.__do_castle(king, 'Long' if king.castling_roots[0][0] -
-                             king.prev_root_name[1][0] < 0 else 'Short')
+            self.__do_castle(king, 'Long' if king.root_name[1][0] -
+                             self.__prev_piece_value[1][0] < 0 else 'Short')
         king.castling_roots = []
+        self.__prev_piece_value = None
 
     def __rooks_after_move_logic(self, rook: Rook):
         king_pos = self.__get_piece_pos_by_name('K' if rook.color == 'w' else 'k')
@@ -566,20 +570,16 @@ class Chessboard:
     def __do_castle(self, king: King, castling_type: str):
         rook = None
         for piece in Common.all_pieces:
-            print('prob rook coords', piece.root_name, piece.piece_name)
-            print('prev', king.prev_root_name)
             if (piece.piece_name == ('R' if king.color == 'w' else 'r')
-                    and (piece.root_name[1][0] - king.prev_root_name[1][0] < 0
+                    and ((piece.root_name[1][0] - self.__prev_piece_value[1][0] < 0)
                          if castling_type == 'Long'
-                         else piece.root_name[1][0] - king.prev_root_name[1][0] > 0)):
-                print('found')
+                         else (piece.root_name[1][0] - self.__prev_piece_value[1][0] > 0))):
                 rook = piece
         castling_root = self.__get_root_by_pos((king.root_name[1][0] +
                                                 (-1 if castling_type == 'Short' else 1),
                                                 king.root_name[1][1]))
-        if rook is not None:
-            rook.move_to_root(castling_root)
-            self.__write_to_board_data(rook)
+        rook.move_to_root(castling_root)
+        self.__write_to_board_data(rook)
 
     def __check_check(self, piece):
         piece.check_movables()

@@ -48,10 +48,11 @@ class Piece(pg.sprite.Sprite):
         else:
             self.is_moved = False
 
-    def movables_checking_loop(self, movables):
+    def movables_checking_loop(self, movables, checking_type):
         for movable in movables:
             offset = (self.column + movable[0], self.row + movable[1])
-            if offset in self.roots_dict.values() and self.piece_color_check(offset):
+            if (offset in self.roots_dict.values() and self.piece_color_check(offset)
+                    and self.__check_check(offset, checking_type)):
                 self.movable_roots.append(offset)
         new_movables = self.movable_roots.copy()
         for root in self.movable_roots:
@@ -76,6 +77,20 @@ class Piece(pg.sprite.Sprite):
                 else:
                     break
                 offset = (offset[0] + movable[0], offset[1] + movable[1])
+
+    def __check_check(self, offset, checking_type):
+        if not checking_type:
+            for piece in Common.all_pieces:
+                if piece.color != self.color:
+                    prev_column = self.column
+                    prev_row = self.row
+                    self.column = offset[0]
+                    self.row = offset[1]
+                    piece.check_movables(True)
+                    if offset in piece.movable_roots:
+                        print('very checked')
+                        return False
+        return True
 
     def piece_color_check(self, offset):
         for root in Common.all_roots:
@@ -109,8 +124,8 @@ class King(Piece):
         self.is_long_castling_possible = True
         self.castling_roots = []
 
-    def check_movables(self):
-        self.movables_checking_loop(self.movable_roots_r + self.movable_roots_b)
+    def check_movables(self, checking_type=False):
+        self.movables_checking_loop(self.movable_roots_r + self.movable_roots_b, checking_type)
         if ((self.column - 1, self.row) in self.movable_roots and
                 self.is_long_castling_possible and
                 self.specific_move_check((self.column - 3, self.row)) and
@@ -146,6 +161,7 @@ class Rook(Piece):
     def __init__(self, color: str, root: str, roots_dict):
         super().__init__(color, root, '_rook.png', roots_dict)
         self.piece_name = 'R' if color == 'w' else 'r'
+        self.castling_pos = None
 
     def check_movables(self):
         self.movable_checking_loop_with_continuing(self.movable_roots_r)
@@ -171,8 +187,8 @@ class Knight(Piece):
         self.movable_roots_n = [(-1, -2), (1, -2), (-2, -1), (2, -1),  # Up
                                 (-2, 1), (2, 1), (-1, 2), (1, 2)]  # Down
 
-    def check_movables(self):
-        self.movables_checking_loop(self.movable_roots_n)
+    def check_movables(self, checking_type):
+        self.movables_checking_loop(self.movable_roots_n, checking_type=False)
         self.remove_duplicates_in_movables()
 
 

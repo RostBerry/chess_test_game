@@ -367,6 +367,8 @@ class Chessboard:
                     if self.__fits_in_border(self.__selected_piece, pos):
                         self.__selected_piece.rect.center = pos
                         self.__can_drag = True
+                    if self.__selected_piece.piece_name in ['k', 'K']:
+                        self.__prev_piece_value = self.__selected_piece.root_name
 
                 else:
                     self.__unmark_all_marks()
@@ -446,9 +448,8 @@ class Chessboard:
         self.__all_selects.add(select)
 
     def __draw_available_roots(self, piece: Piece):
-        piece.movable_roots = []
-        piece.takeable_roots = []
         piece.check_movables()
+        print('mov', piece.movable_roots, 'tak', piece.takeable_roots)
         for available in piece.movable_roots:
             moving_dist = (available[0], available[1])
             for root in Common.all_roots:
@@ -526,8 +527,8 @@ class Chessboard:
             Common.other_map[1] = '-'
         piece.first_move = False
         self.__check_check(piece)
-        self.write_piece_positions()
         self.__check_pat()
+        self.write_piece_positions()
         self.__change_turn()
         self.__write_to_board_data(piece)
 

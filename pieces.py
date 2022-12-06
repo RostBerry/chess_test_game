@@ -50,12 +50,19 @@ class Piece(pg.sprite.Sprite):
         else:
             self.is_moved = False
 
+    def annul_roots(self):
+        self.movable_roots = []
+        self.takeable_roots = []
+        self.all_possible_roots = []
+        self.all_possible_takeable_roots = []
+
     def movables_checking_loop(self, movables):
-        for movable in movables:
-            offset = (self.column + movable[0], self.row + movable[1])
-            if (offset in self.roots_dict.values() and self.piece_color_check(offset)
-                    ):
-                self.movable_roots.append(offset)
+        for prob_movable in movables:
+            offset = (self.column + prob_movable[0], self.row + prob_movable[1])
+            if offset in self.roots_dict.values():
+                self.all_possible_roots.append(offset)
+                if self.piece_color_check(offset):
+                    self.movable_roots.append(offset)
         new_movables = self.movable_roots.copy()
         for root in self.movable_roots:
             for piece in Common.all_pieces:
@@ -64,26 +71,23 @@ class Piece(pg.sprite.Sprite):
                     new_movables.remove(root)
         self.movable_roots = new_movables
 
+        new_possible_movables = self.all_possible_roots.copy()
+        for root in self.all_possible_roots:
+            for piece in Common.all_pieces:
+                if piece.root_name[1] == root:
+                    self.all_possible_takeable_roots.append(root)
+                    new_possible_movables.remove(root)
+        self.all_possible_roots = new_possible_movables
+
     def movable_checking_loop_with_continuing(self, movable_roots):
         for movable in movable_roots:
-            offset = (self.column + movable[0], self.row + movable[1])
-            while True:
-                if (offset in self.roots_dict_values
-                        and self.piece_color_check(offset)):
-                    self.movable_roots.append(offset)
-                    if self.piece_color_break_check:
-                        self.takeable_roots.append(offset)
-                        self.movable_roots.remove(offset)
-                        self.piece_color_break_check = False
-                        break
-                else:
-                    break
-                offset = (offset[0] + movable[0], offset[1] + movable[1])
 
             offset = (self.column + movable[0], self.row + movable[1])
             while True:
                 if offset in self.roots_dict_values:
                     self.all_possible_roots.append(offset)
+                    if self.piece_check_on_path(offset):
+                        self.all_possible_takeable_roots.append(offset)
                 else:
                     break
                 offset = (offset[0] + movable[0], offset[1] + movable[1])
@@ -93,39 +97,49 @@ class Piece(pg.sprite.Sprite):
 
     def piece_color_check(self, offset):
         for root in Common.all_roots:
-            if root.root_name[1] == offset and root.kept:
-                for piece in self.pieces_positions:
-                    if piece[0][0] == root.root_name[0]:
-                        if piece[1] != self.color:
+            if root.root_name[1] == offset:
+                for piece_pos in self.pieces_positions:
+                    if piece_pos[0][0] == root.root_name[0]:
+                        if piece_pos[1] != self.color:
                             self.piece_color_break_check = True
                         else:
                             return False
         return True
 
+    def piece_color_check_in_loop(self, offset):
+        for root in Common.all_roots:
+            if root.root_name[1] == offset:
+                for piece_pos in self.pieces_positions:
+                    if piece_pos[0][0] == root.root_name[0]:
+                        if piece_pos[1] == self.color:
+                            return False
+        return True
+
     def piece_check_on_path(self, offset):
         for root in Common.all_roots:
-            if root.root_name[1] == offset and root.kept:
+            if root.root_name[1] == offset:
                 for piece in self.pieces_positions:
-                    print(piece, root.root_name)
                     if piece[0][0] == root.root_name[0]:
                         self.piece_color_break_check = True
                     else:
-                        return False
-        return True
+                        return True
+        return False
 
     def specific_move_check(self, offset):
         for root in Common.all_roots:
-            if root.root_name[1] == offset and root.kept:
+            if root.root_name[1] == offset:
                 for piece in self.pieces_positions:
                     if piece[0][0] == root.root_name[0]:
                         return False
         return True
 
     def remove_duplicates_in_movables(self):
-        self.movable_roots = list(dict.fromkeys(self.movable_roots))
-        self.all_possible_roots = list(dict.fromkeys(self.all_possible_roots))
-        self.all_possible_takeable_roots = list(dict.fromkeys(self.all_possible_takeable_roots))
-        print(self.all_possible_roots, self.all_possible_takeable_roots)
+        pass
+        # self.movable_roots = list(dict.fromkeys(self.movable_roots))
+        # self.takeable_roots = list(dict.fromkeys(self.takeable_roots))
+        # self.all_possible_roots = list(dict.fromkeys(self.all_possible_roots))
+        # self.all_possible_takeable_roots = list(dict.fromkeys(self.all_possible_takeable_roots))
+        # print(self.all_possible_roots, self.all_possible_takeable_roots)
 
 
 # noinspection PyTypeChecker
@@ -138,7 +152,10 @@ class King(Piece):
         self.castling_roots = []
 
     def check_movables(self):
+        self.annul_roots()
+
         self.movables_checking_loop(self.movable_roots_r + self.movable_roots_b)
+
         if ((self.column - 1, self.row) in self.movable_roots and
                 self.is_long_castling_possible and
                 self.specific_move_check((self.column - 3, self.row)) and
@@ -164,8 +181,8 @@ class Queen(Piece):
         self.piece_name = 'Q' if color == 'w' else 'q'
 
     def check_movables(self):
-        self.movable_checking_loop_with_continuing(self.movable_roots_b)
-        self.movable_checking_loop_with_continuing(self.movable_roots_r)
+        self.annul_roots()
+        self.movable_checking_loop_with_continuing(self.movable_roots_b + self.movable_roots_r)
         self.remove_duplicates_in_movables()
 
 
@@ -177,6 +194,7 @@ class Rook(Piece):
         self.castling_pos = None
 
     def check_movables(self):
+        self.annul_roots()
         self.movable_checking_loop_with_continuing(self.movable_roots_r)
         self.remove_duplicates_in_movables()
 
@@ -188,6 +206,7 @@ class Bishop(Piece):
         self.piece_name = 'B' if color == 'w' else 'b'
 
     def check_movables(self):
+        self.annul_roots()
         self.movable_checking_loop_with_continuing(self.movable_roots_b)
         self.remove_duplicates_in_movables()
 
@@ -201,6 +220,7 @@ class Knight(Piece):
                                 (-2, 1), (2, 1), (-1, 2), (1, 2)]  # Down
 
     def check_movables(self):
+        self.annul_roots()
         self.movables_checking_loop(self.movable_roots_n)
         self.remove_duplicates_in_movables()
 
@@ -214,6 +234,7 @@ class Pawn(Piece):
         self.passing_pawn_pos = None
 
     def check_movables(self):
+        self.annul_roots()
 
         move = (self.column, self.row - 1) if self.color == 'w' else (self.column, self.row + 1)
         if (move in self.roots_dict.values()

@@ -448,7 +448,7 @@ class Chessboard:
     def __draw_available_roots(self, piece: Piece):
         piece.movable_roots = []
         piece.takeable_roots = []
-        piece.check_movables(False)
+        piece.check_movables()
         for available in piece.movable_roots:
             moving_dist = (available[0], available[1])
             for root in Common.all_roots:
@@ -499,7 +499,6 @@ class Chessboard:
     def __write_to_board_data(self, piece):
         value = letters.find(piece.root_name[0][0])
         row = self.__count - int(piece.root_name[0][1])
-        print(piece.prev_root_name)
         prev_value = letters.find(piece.prev_root_name[0][0])
         prev_row = self.__count - int(piece.prev_root_name[0][1])
         self.__board_data[prev_row][prev_value] = 0
@@ -528,6 +527,7 @@ class Chessboard:
         piece.first_move = False
         self.__check_check(piece)
         self.write_piece_positions()
+        self.__check_pat()
         self.__change_turn()
         self.__write_to_board_data(piece)
 
@@ -584,11 +584,15 @@ class Chessboard:
     def __check_check(self, piece):
         piece.check_movables()
         king_pos = self.__get_piece_pos_by_name('K' if piece.color == 'b' else 'k')
-        if king_pos in piece.movable_roots:
+        if king_pos in piece.takeable_roots:
             self.__check_logic()
 
     def __check_logic(self):
         print('Check')
+
+    def __check_pat(self):
+        pass
+
 
     def __change_turn(self):
         self.__turn = 'w' if self.__turn == 'b' else 'b'

@@ -308,9 +308,9 @@ class Chessboard:
 
     def __fits_in_border(self, piece, pos):
         """Checks if the mouse isn't outside the borders"""
-        if (self.__clipped_area.collidepoint(pos[0] - piece.rect.width // 4,
+        if (self.__clipped_area.collidepoint(pos[0] - piece.rect.width // 2,
                                              pos[1] - piece.rect.height // 2)
-            and self.__clipped_area.collidepoint(pos[0] + piece.rect.width // 4,
+            and self.__clipped_area.collidepoint(pos[0] + piece.rect.width // 2,
                                                  pos[1] + piece.rect.height // 2)):
             return True
         return False

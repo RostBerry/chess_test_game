@@ -30,6 +30,7 @@ class Piece(pg.sprite.Sprite):
         self.all_possible_roots = []
         self.takeable_roots = []
         self.all_possible_takeable_roots = []
+        self.prob_check_roots = []
         self.all_roots = Common.all_roots
         self.piece_color_break_check = False
         self.roots_dict = roots_dict
@@ -55,6 +56,7 @@ class Piece(pg.sprite.Sprite):
         self.takeable_roots = []
         self.all_possible_roots = []
         self.all_possible_takeable_roots = []
+        self.prob_check_roots = []
 
     def movables_checking_loop(self, movables):
         for prob_movable in movables:
@@ -81,6 +83,21 @@ class Piece(pg.sprite.Sprite):
 
     def movable_checking_loop_with_continuing(self, movable_roots):
         for movable in movable_roots:
+            offset = (self.column + movable[0], self.row + movable[1])
+            while True:
+                if offset in self.roots_dict_values:
+                    if self.piece_color_check(offset):
+                        self.movable_roots.append(offset)
+                        if self.piece_color_break_check:
+                            self.movable_roots.remove(offset)
+                            self.takeable_roots.append(offset)
+                            self.piece_color_break_check = False
+                            break
+                    else:
+                        break
+                else:
+                    break
+                offset = (offset[0] + movable[0], offset[1] + movable[1])
 
             offset = (self.column + movable[0], self.row + movable[1])
             while True:
@@ -92,37 +109,41 @@ class Piece(pg.sprite.Sprite):
                     break
                 offset = (offset[0] + movable[0], offset[1] + movable[1])
 
+            collision_check = 0
+            offset = (self.column + movable[0], self.row + movable[1])
+            while True:
+                if offset in self.roots_dict_values:
+                    self.piece_check_through_one(offset)
+                    if self.piece_color_break_check:
+                        if collision_check < 2:
+                            self.prob_check_roots.append(offset)
+                        self.piece_color_break_check = False
+                        collision_check += 1
+                else:
+                    break
+                offset = (offset[0] + movable[0], offset[1] + movable[1])
+
     def __check_check(self, offset):
         pass
 
     def piece_color_check(self, offset):
-        for root in Common.all_roots:
-            if root.root_name[1] == offset:
-                for piece_pos in self.pieces_positions:
-                    if piece_pos[0][0] == root.root_name[0]:
-                        if piece_pos[1] != self.color:
-                            self.piece_color_break_check = True
-                        else:
-                            return False
+        for piece_pos in self.pieces_positions:  # piece_pos looks like ((a1, (1, 1)), w)
+            if piece_pos[0][1] == offset:
+                if piece_pos[1] != self.color:
+                    self.piece_color_break_check = True
+                else:
+                    return False
         return True
 
-    def piece_color_check_in_loop(self, offset):
-        for root in Common.all_roots:
-            if root.root_name[1] == offset:
-                for piece_pos in self.pieces_positions:
-                    if piece_pos[0][0] == root.root_name[0]:
-                        if piece_pos[1] == self.color:
-                            return False
-        return True
+    def piece_check_through_one(self, offset):
+        for piece_pos in self.pieces_positions:  # piece_pos looks like ((a1, (1, 1)), w)
+            if piece_pos[0][1] == offset:
+                self.piece_color_break_check = True
 
     def piece_check_on_path(self, offset):
-        for root in Common.all_roots:
-            if root.root_name[1] == offset:
-                for piece in self.pieces_positions:
-                    if piece[0][0] == root.root_name[0]:
-                        self.piece_color_break_check = True
-                    else:
-                        return True
+        for piece_pos in self.pieces_positions:
+            if piece_pos[0][1] != offset:
+                return True
         return False
 
     def specific_move_check(self, offset):
@@ -134,12 +155,11 @@ class Piece(pg.sprite.Sprite):
         return True
 
     def remove_duplicates_in_movables(self):
-        pass
         # self.movable_roots = list(dict.fromkeys(self.movable_roots))
         # self.takeable_roots = list(dict.fromkeys(self.takeable_roots))
         # self.all_possible_roots = list(dict.fromkeys(self.all_possible_roots))
         # self.all_possible_takeable_roots = list(dict.fromkeys(self.all_possible_takeable_roots))
-        # print(self.all_possible_roots, self.all_possible_takeable_roots)
+        print('prob check roots:', self.prob_check_roots)
 
 
 # noinspection PyTypeChecker

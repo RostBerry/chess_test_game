@@ -70,6 +70,7 @@ class Piece(pg.sprite.Sprite):
             for piece in Common.all_pieces:
                 if piece.root_name[1] == root and piece.color != self.color:
                     self.takeable_roots.append(root)
+                    self.prob_check_roots.append(root)
                     new_movables.remove(root)
         self.movable_roots = new_movables
 
@@ -115,7 +116,7 @@ class Piece(pg.sprite.Sprite):
                 if offset in self.roots_dict_values:
                     self.piece_check_through_one(offset)
                     if self.piece_color_break_check:
-                        if collision_check < 2:
+                        if collision_check == 1:
                             self.prob_check_roots.append(offset)
                         self.piece_color_break_check = False
                         collision_check += 1
@@ -277,6 +278,7 @@ class Pawn(Piece):
                      or pawn_passing_check)
                 and self.piece_color_check(move)):
             self.takeable_roots.append(move)
+            self.prob_check_roots.append(move)
             if pawn_passing_check:
                 self.taking_on_the_pass = move
                 self.passing_pawn_pos = pawn_passing_move
@@ -291,6 +293,7 @@ class Pawn(Piece):
                      or pawn_passing_check)
                 and self.piece_color_check(move)):
             self.takeable_roots.append(move)
+            self.prob_check_roots.append(move)
             if pawn_passing_check:
                 self.taking_on_the_pass = move
                 self.passing_pawn_pos = pawn_passing_move

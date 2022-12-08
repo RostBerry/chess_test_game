@@ -28,6 +28,7 @@ class Chessboard:
         self.__all_checks = pg.sprite.Group()
         self.__all_input_boxes = pg.sprite.Group()
         self.__all_marks = pg.sprite.Group()
+        self.__all_choices = pg.sprite.Group()
         # Defining interactive objects or variables
         self.roots_dict = {}
         self.__input_box = None
@@ -537,6 +538,11 @@ class Chessboard:
             self.kill_piece(self.__get_piece_by_piece_pos(pawn.passing_pawn_pos))
         if pawn.first_move and pawn.root_name[1][1] - pawn.prev_root_name[1][1] in [2, -2]:
             Common.other_map[2] = pawn.root_name[0]
+        if pawn.root_name[1][1] == (len(self.__board_data)
+                                    if pawn.color == 'b'
+                                    else 1):
+            choice = Choice(pawn)
+            self.__all_choices.add(choice)
         pawn.taking_ont_the_pass = None
         pawn.passing_pawn_pos = None
 
@@ -618,6 +624,7 @@ class Chessboard:
         self.__all_checks.draw(self.__screen)
         Common.all_marks.draw(self.__screen)
         Common.all_pieces.draw(self.__screen)
+        self.__all_choices.draw(self.__screen)
         pg.display.update()
 
 
@@ -713,3 +720,28 @@ class Select(pg.sprite.Sprite):
         self.image.fill(ACTIVE_ROOT_COLOR)
         self.rect = pg.Rect((root.rect.x, root.rect.y), (ROOT_SIZE, ROOT_SIZE))
         self.root_name = root.root_name
+
+
+class Choice(pg.sprite.Sprite):
+    """This thing when you wanna be a queen on 8th root"""
+
+    def __init__(self, pawn: Piece):
+        super().__init__()
+        height = ROOT_SIZE * 4
+        self.image = pg.Surface((ROOT_SIZE, height))
+        self.image.fill(WHITE)
+        self.rect = pg.Rect((pawn.rect.x,
+                             pawn.rect.y + (ROOT_SIZE
+                                            if pawn.color == 'w'
+                                            else -height)),
+                            (ROOT_SIZE, height))
+        self.counter = 1
+        while self.counter < 4:
+
+
+
+class ChoosingPiece:
+    """Piece to choose at the end of board"""
+
+    def __init__(self, counter: int):
+        self.names_dict = {1: 'queen', 2: 'rook', 3: 'bishop'}

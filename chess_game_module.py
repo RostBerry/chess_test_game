@@ -32,6 +32,7 @@ class Chessboard:
         # Defining interactive objects or variables
         self.roots_dict = {}
         self.__input_box = None
+        self.__choice = None
         self.__pressed_input_box = None
         self.__pressed_root = None
         self.__released_root = None
@@ -256,9 +257,7 @@ class Chessboard:
         pieces_root_names = []
         for piece in Common.all_pieces:
             pieces_root_names.append((piece.root_name, piece.color))
-        for piece in Common.all_pieces:
-            piece.pieces_positions = tuple(pieces_root_names)
-            piece.all_roots = Common.all_roots
+        Common.pieces_positions = tuple(pieces_root_names)
 
     def __to_root_name(self, board_data_coord: tuple):
         """Returns the name of the root"""
@@ -318,7 +317,9 @@ class Chessboard:
 
     def drag(self, pos: tuple):
         """Works when the mouse is moving"""
-        if self.__taken_piece is not None:
+        if self.__choice is not None:
+            pass
+        elif self.__taken_piece is not None:
             # Checks if the piece isn't moving outside the clipped area and moves it
             if self.__fits_in_border(self.__taken_piece, pos):
                 self.__taken_piece.rect.center = pos
@@ -339,9 +340,12 @@ class Chessboard:
         self.__clicked = True  # Statement needed to correct root selection
         # Checking if the user clicked on root or input box
         if button_type == 1:
-            self.__pressed_root = (self.__get_root(pos)
-                                   if self.__selected_piece is None
-                                   else self.__pressed_root)
+            if self.__choice is not None:
+                pass
+            else:
+                self.__pressed_root = (self.__get_root(pos)
+                                       if self.__selected_piece is None
+                                       else self.__pressed_root)
         self.__pressed_input_box = self.__get_input_box(pos)
         # User clicked on the input box
         if self.__pressed_input_box is not None:
@@ -541,8 +545,7 @@ class Chessboard:
         if pawn.root_name[1][1] == (len(self.__board_data)
                                     if pawn.color == 'b'
                                     else 1):
-            choice = Choice(pawn)
-            self.__all_choices.add(choice)
+            self.__choice = Choice(pawn)
         pawn.taking_ont_the_pass = None
         pawn.passing_pawn_pos = None
 
@@ -624,7 +627,8 @@ class Chessboard:
         self.__all_checks.draw(self.__screen)
         Common.all_marks.draw(self.__screen)
         Common.all_pieces.draw(self.__screen)
-        self.__all_choices.draw(self.__screen)
+        Common.all_choosing_cells.draw(self.__screen)
+        Common.all_choosing_pieces.draw(self.__screen)
         pg.display.update()
 
 
@@ -725,23 +729,39 @@ class Select(pg.sprite.Sprite):
 class Choice(pg.sprite.Sprite):
     """This thing when you wanna be a queen on 8th root"""
 
-    def __init__(self, pawn: Piece):
+    def __init__(self, pawn: Pawn):
         super().__init__()
-        height = ROOT_SIZE * 4
-        self.image = pg.Surface((ROOT_SIZE, height))
-        self.image.fill(WHITE)
-        self.rect = pg.Rect((pawn.rect.x,
-                             pawn.rect.y + (ROOT_SIZE
-                                            if pawn.color == 'w'
-                                            else -height)),
-                            (ROOT_SIZE, height))
         self.counter = 1
-        while self.counter < 4:
+        while self.counter < 5:
+            cell = ChoosingCell(pawn, self.counter)
+            Common.all_choosing_cells.add(cell)
+            self.counter += 1
 
 
-
-class ChoosingPiece:
+class ChoosingPiece(pg.sprite.Sprite):
     """Piece to choose at the end of board"""
 
-    def __init__(self, counter: int):
-        self.names_dict = {1: 'queen', 2: 'rook', 3: 'bishop'}
+    def __init__(self, counter: int, pawn: Pawn):
+        super().__init__()
+        self.names_dict = {1: 'queen', 2: 'rook', 3: 'knight', 4: 'bishop'}
+        image = Image.open(IMG_PATH +
+                           PIECE_IMG_PATH +
+                           pawn.color + '_' +
+                           self.names_dict[counter] +
+                           '.png').resize((ROOT_SIZE, ROOT_SIZE))
+        self.image = pg.image.fromstring(image.tobytes(), image.size, image.mode)
+
+
+class ChoosingCell(pg.sprite.Sprite):
+    """One of the cells the choosing piece can be placed on"""
+
+    def __init__(self, pawn: Pawn, counter):
+        super().__init__()
+        self.image = pg.Surface((ROOT_SIZE, ROOT_SIZE))
+        self.image.fill(WHITE)
+        self.rect = pg.Rect((pawn.rect.x,
+                             pawn.rect.y + (ROOT_SIZE if pawn.color == 'w' else -ROOT_SIZE) * counter),
+                            (ROOT_SIZE, ROOT_SIZE))
+        choosing = ChoosingPiece(counter, pawn)
+        choosing.rect = self.rect
+        Common.all_choosing_pieces.add(choosing)

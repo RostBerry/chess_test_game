@@ -34,7 +34,6 @@ class Piece(pg.sprite.Sprite):
         self.all_roots = Common.all_roots
         self.piece_color_break_check = False
         self.roots_dict = roots_dict
-        self.pieces_positions = None
         self.roots_dict_keys = list(self.roots_dict.keys())
         self.roots_dict_values = list(self.roots_dict.values())
 
@@ -128,7 +127,7 @@ class Piece(pg.sprite.Sprite):
         pass
 
     def piece_color_check(self, offset):
-        for piece_pos in self.pieces_positions:  # piece_pos looks like ((a1, (1, 1)), w)
+        for piece_pos in Common.pieces_positions:  # piece_pos looks like ((a1, (1, 1)), w)
             if piece_pos[0][1] == offset:
                 if piece_pos[1] != self.color:
                     self.piece_color_break_check = True
@@ -137,12 +136,12 @@ class Piece(pg.sprite.Sprite):
         return True
 
     def piece_check_through_one(self, offset):
-        for piece_pos in self.pieces_positions:  # piece_pos looks like ((a1, (1, 1)), w)
+        for piece_pos in Common.pieces_positions:  # piece_pos looks like ((a1, (1, 1)), w)
             if piece_pos[0][1] == offset:
                 self.piece_color_break_check = True
 
     def piece_check_on_path(self, offset):
-        for piece_pos in self.pieces_positions:
+        for piece_pos in Common.pieces_positions:
             if piece_pos[0][1] != offset:
                 return True
         return False
@@ -150,7 +149,7 @@ class Piece(pg.sprite.Sprite):
     def specific_move_check(self, offset):
         for root in Common.all_roots:
             if root.root_name[1] == offset:
-                for piece in self.pieces_positions:
+                for piece in Common.pieces_positions:
                     if piece[0][0] == root.root_name[0]:
                         return False
         return True
@@ -270,9 +269,14 @@ class Pawn(Piece):
 
         move = (self.column + 1, self.row - 1) if self.color == 'w' else (self.column - 1, self.row + 1)
         pawn_passing_move = (move[0], move[1] + (1 if self.color == 'w' else -1))
+        pawn_passing_name = None
+        for piece in Common.all_pieces:
+            if piece.piece_name == ('p' if self.color == 'w' else 'P'):
+                if piece.root_name[0] == Common.other_map[2]:
+                    pawn_passing_name = piece.root_name[0]
         pawn_passing_check = (not self.specific_move_check(pawn_passing_move)
                               and self.piece_color_check(pawn_passing_move)
-                              and Common.other_map[2] != '-')
+                              and pawn_passing_name is not None)
         if (move in self.roots_dict.values()
                 and (not self.specific_move_check(move)
                      or pawn_passing_check)
@@ -284,10 +288,15 @@ class Pawn(Piece):
                 self.passing_pawn_pos = pawn_passing_move
 
         move = (self.column - 1, self.row - 1) if self.color == 'w' else (self.column + 1, self.row + 1)
-        pawn_passing_move = (move[0], move[1] + (1 if self.color == 'w' else -11))
+        pawn_passing_move = (move[0], move[1] + (1 if self.color == 'w' else -1))
+        pawn_passing_name = None
+        for piece in Common.all_pieces:
+            if piece.piece_name == ('p' if self.color == 'w' else 'P'):
+                if piece.root_name[0] == Common.other_map[2]:
+                    pawn_passing_name = piece.root_name[0]
         pawn_passing_check = (not self.specific_move_check(pawn_passing_move)
                               and self.piece_color_check(pawn_passing_move)
-                              and Common.other_map[2] != '-')
+                              and pawn_passing_name is not None)
         if (move in self.roots_dict.values()
                 and (not self.specific_move_check(move)
                      or pawn_passing_check)

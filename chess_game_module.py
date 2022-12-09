@@ -21,8 +21,6 @@ class Chessboard:
         self.__chessboard_font = pg.font.Font(FONT_CHESSBOARD_PATH, self.__chessboard_font_size)
         self.__text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
         # Defining sprite groups
-        self.__all_roots = pg.sprite.Group()
-        self.__all_pieces = pg.sprite.Group()
         self.__all_pieces_list = []
         self.__all_selects = pg.sprite.Group()
         self.__all_checks = pg.sprite.Group()
@@ -33,6 +31,9 @@ class Chessboard:
         self.roots_dict = {}
         self.__input_box = None
         self.__choice = None
+        self.__choosing_cell = None
+        self.__choosing_pawn = None
+        self.__all_possible_pieces = {}
         self.__pressed_input_box = None
         self.__pressed_root = None
         self.__released_root = None
@@ -174,6 +175,7 @@ class Chessboard:
                     # Creating a piece based on board_data and adding it to the group
                     piece = self.__create_piece(root_value, (j, i))
                     Common.all_pieces.add(piece)
+                    self.__all_possible_pieces[piece.piece_name] = piece
         for piece in Common.all_pieces:
             for root in Common.all_roots:
                 # Places the piece on the root
@@ -284,6 +286,27 @@ class Chessboard:
             return self.__input_box
         return None
 
+    def __colorize_choosing_cell(self, pos: tuple):
+        """Colorize one of the cells to choose a new piece for"""
+        for cell in Common.all_choosing_cells:
+            if cell.rect.collidepoint(pos):
+                cell.image.fill(GRAY)
+            else:
+                cell.image.fill(WHITE)
+
+    def __get_choosing_cell_on_click(self, pos: tuple):
+        """Returns the clicked choosing cell"""
+        for cell in Common.all_choosing_cells:
+            if cell.rect.collidepoint(pos):
+                return cell
+        return None
+
+    def __get_new_piece(self, choosing_cell):
+        for choosing_piece in Common.all_choosing_pieces:
+            if choosing_piece.counter == choosing_cell.counter:
+                return choosing_piece
+        return None
+
     def __get_piece_on_click(self, root):
         """Returns the clicked piece"""
         for piece in Common.all_pieces:
@@ -318,7 +341,8 @@ class Chessboard:
     def drag(self, pos: tuple):
         """Works when the mouse is moving"""
         if self.__choice is not None:
-            pass
+            if not self.__clicked:
+                self.__colorize_choosing_cell(pos)
         elif self.__taken_piece is not None:
             # Checks if the piece isn't moving outside the clipped area and moves it
             if self.__fits_in_border(self.__taken_piece, pos):
@@ -341,7 +365,11 @@ class Chessboard:
         # Checking if the user clicked on root or input box
         if button_type == 1:
             if self.__choice is not None:
-                pass
+                self.__choosing_cell = self.__get_choosing_cell_on_click(pos)
+                if self.__choosing_cell is not None:
+                    new_piece = self.__get_new_piece(self.__choosing_cell)
+                    new_piece_coords = self.__choosing_pawn.root_name[1]
+                    self.__create_new_piece(new_piece, new_piece_coords, self.__choosing_pawn)
             else:
                 self.__pressed_root = (self.__get_root(pos)
                                        if self.__selected_piece is None
@@ -502,12 +530,26 @@ class Chessboard:
         piece.kill()
         Common.all_pieces.remove(piece)
 
-    def __write_to_board_data(self, piece):
+    def __create_new_piece(self, new_piece, new_piece_coords, pawn):
+        piece = self.__create_piece(new_piece.piece_name, (new_piece_coords[1],
+                                                           new_piece_coords[0]))
+        piece.rect = pawn.rect.copy()
+        self.kill_piece(pawn)
+        Common.all_pieces.add(piece)
+        self.__write_to_board_data(piece, pawn.root_name[1])
+        self.write_piece_positions()
+
+    def __write_to_board_data(self, piece, pawn_pos):
         value = letters.find(piece.root_name[0][0])
         row = self.__count - int(piece.root_name[0][1])
-        prev_value = letters.find(piece.prev_root_name[0][0])
-        prev_row = self.__count - int(piece.prev_root_name[0][1])
-        self.__board_data[prev_row][prev_value] = 0
+        if piece.prev_root_name is not None:
+            prev_value = letters.find(piece.prev_root_name[0][0])
+            prev_row = self.__count - int(piece.prev_root_name[0][1])
+            self.__board_data[prev_row][prev_value] = 0
+        else:
+            prev_value = pawn_pos[0] - 1
+            prev_row = self.__count - pawn_pos[1] - 1
+            self.__board_data[prev_row][prev_value] = 0
         self.__board_data[row][value] = piece.piece_name
 
         self.__write_fen_from_board()
@@ -535,7 +577,7 @@ class Chessboard:
         self.__check_pat()
         self.write_piece_positions()
         self.__change_turn()
-        self.__write_to_board_data(piece)
+        self.__write_to_board_data(piece, None)
 
     def __pawns_after_move_logic(self, pawn: Pawn):
         if pawn.root_name[1] == pawn.taking_on_the_pass:
@@ -546,6 +588,7 @@ class Chessboard:
                                     if pawn.color == 'b'
                                     else 1):
             self.__choice = Choice(pawn)
+            self.__choosing_pawn = pawn
         pawn.taking_ont_the_pass = None
         pawn.passing_pawn_pos = None
 
@@ -589,7 +632,7 @@ class Chessboard:
                                                 (-1 if castling_type == 'Short' else 1),
                                                 king.root_name[1][1]))
         rook.move_to_root(castling_root)
-        self.__write_to_board_data(rook)
+        self.__write_to_board_data(rook, None)
 
     def __check_check(self, piece):
         piece.check_movables()
@@ -743,7 +786,10 @@ class ChoosingPiece(pg.sprite.Sprite):
 
     def __init__(self, counter: int, pawn: Pawn):
         super().__init__()
+        self.counter = counter
         self.names_dict = {1: 'queen', 2: 'rook', 3: 'knight', 4: 'bishop'}
+        self.piece_names_dict = {1: ('q', 'Q'), 2: ('r', 'R'), 3: ('n', 'N'), 4: ('b', 'B')}
+        self.piece_name = self.piece_names_dict[counter][0 if pawn.color == 'b' else 1]
         image = Image.open(IMG_PATH +
                            PIECE_IMG_PATH +
                            pawn.color + '_' +
@@ -757,6 +803,7 @@ class ChoosingCell(pg.sprite.Sprite):
 
     def __init__(self, pawn: Pawn, counter):
         super().__init__()
+        self.counter = counter
         self.image = pg.Surface((ROOT_SIZE, ROOT_SIZE))
         self.image.fill(WHITE)
         self.rect = pg.Rect((pawn.rect.x,

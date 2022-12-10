@@ -40,7 +40,7 @@ class Piece(pg.sprite.Sprite):
     def move_to_root(self, root):
         """Moves the piece to the root"""
         root_copy = root.rect.copy()
-        self.rect.center = root_copy.center
+        self.rect = root_copy
         if self.root_name != root.root_name:
             self.is_moved = True
             self.prev_root_name = self.root_name

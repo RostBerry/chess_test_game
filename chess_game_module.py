@@ -33,6 +33,8 @@ class Chessboard:
         self.__choice = None
         self.__choosing_cell = None
         self.__choosing_pawn = None
+        self.__chosen_new_piece = None
+        self.__new_created_piece = None
         self.__all_possible_pieces = {}
         self.__pressed_input_box = None
         self.__pressed_root = None
@@ -341,8 +343,7 @@ class Chessboard:
     def drag(self, pos: tuple):
         """Works when the mouse is moving"""
         if self.__choice is not None:
-            if not self.__clicked:
-                self.__colorize_choosing_cell(pos)
+            self.__colorize_choosing_cell(pos)
         elif self.__taken_piece is not None:
             # Checks if the piece isn't moving outside the clipped area and moves it
             if self.__fits_in_border(self.__taken_piece, pos):
@@ -367,9 +368,7 @@ class Chessboard:
             if self.__choice is not None:
                 self.__choosing_cell = self.__get_choosing_cell_on_click(pos)
                 if self.__choosing_cell is not None:
-                    new_piece = self.__get_new_piece(self.__choosing_cell)
-                    new_piece_coords = self.__choosing_pawn.root_name[1]
-                    self.__create_new_piece(new_piece, new_piece_coords, self.__choosing_pawn)
+                    self.__chosen_new_piece = self.__get_new_piece(self.__choosing_cell)
             else:
                 self.__pressed_root = (self.__get_root(pos)
                                        if self.__selected_piece is None
@@ -419,6 +418,18 @@ class Chessboard:
                 self.__mark_root(self.__released_root)
             if button_type == 1:  # LMB
                 self.__can_drag = False
+                if self.__choice is not None:
+                    self.__chosen_new_piece = self.__get_new_piece(self.__choosing_cell)
+                    if self.__chosen_new_piece is not None:
+                        new_piece_coords = self.__choosing_pawn.root_name
+                        self.__new_created_piece = self.__create_new_piece(self.__chosen_new_piece,
+                                                                           new_piece_coords,
+                                                                           self.__choosing_pawn)
+                        Common.all_pieces.add(self.__new_created_piece)
+                        self.__choice = None
+                        self.__all_choices.empty()
+                        Common.all_choosing_cells.empty()
+                        Common.all_choosing_pieces.empty()
                 if self.__clicked:
                     self.__move_or_select_piece(self.__released_root)
             if self.__taken_piece is not None:
@@ -531,26 +542,29 @@ class Chessboard:
         Common.all_pieces.remove(piece)
 
     def __create_new_piece(self, new_piece, new_piece_coords, pawn):
-        piece = self.__create_piece(new_piece.piece_name, (new_piece_coords[1],
-                                                           new_piece_coords[0]))
-        piece.rect = pawn.rect.copy()
+        piece = self.__create_piece(new_piece.piece_name, (new_piece_coords[1][1],
+                                                           new_piece_coords[1][0]))
+        piece.move_to_root(pawn)
         self.kill_piece(pawn)
-        Common.all_pieces.add(piece)
+        print('name', pawn.root_name)
         self.__write_to_board_data(piece, pawn.root_name[1])
         self.write_piece_positions()
+        self.__check_check(piece)
+        return piece
 
     def __write_to_board_data(self, piece, pawn_pos):
-        value = letters.find(piece.root_name[0][0])
-        row = self.__count - int(piece.root_name[0][1])
+        value = piece.root_name[1][1] - 2
+        row = piece.root_name[1][0] - 2
         if piece.prev_root_name is not None:
             prev_value = letters.find(piece.prev_root_name[0][0])
             prev_row = self.__count - int(piece.prev_root_name[0][1])
             self.__board_data[prev_row][prev_value] = 0
+            self.__board_data[row][value] = piece.piece_name
         else:
             prev_value = pawn_pos[0] - 1
-            prev_row = self.__count - pawn_pos[1] - 1
+            prev_row = pawn_pos[1] - 1
             self.__board_data[prev_row][prev_value] = 0
-        self.__board_data[row][value] = piece.piece_name
+            self.__board_data[value][row] = piece.piece_name
 
         self.__write_fen_from_board()
 
@@ -574,6 +588,7 @@ class Chessboard:
             Common.other_map[1] = '-'
         piece.first_move = False
         self.__check_check(piece)
+        self.__new_created_piece = None
         self.__check_pat()
         self.write_piece_positions()
         self.__change_turn()
@@ -589,7 +604,7 @@ class Chessboard:
                                     else 1):
             self.__choice = Choice(pawn)
             self.__choosing_pawn = pawn
-        pawn.taking_ont_the_pass = None
+        pawn.taking_on_the_pass = None
         pawn.passing_pawn_pos = None
 
     def __kings_after_move_logic(self, king: King):

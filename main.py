@@ -1,14 +1,15 @@
 from chess_game_module import *
+from menu import *
 
-clock = pg.time.Clock()
-screen = pg.display.set_mode(WINDOW_SIZE)
-pg.display.set_caption('Chess Session', 'Super Realistic Mega Sim')
-pg.display.set_icon(pg.transform.scale(pg.image.load('assets/images/pieces/w_queen.png').convert_alpha(), (32, 32)))
-screen.fill(BACKGROUND)
 
 pg.init()
+clock = pg.time.Clock()
+screen_game = pg.display.set_mode(WINDOW_SIZE)
+pg.display.set_caption('Chess Session')
+pg.display.set_icon(pg.transform.scale(pg.image.load('assets/images/pieces/w_queen.png').convert_alpha(),
+                                       (32, 32)))
 
-chess = Chessboard(screen)
+chess = Chessboard(screen_game)
 
 
 run = True

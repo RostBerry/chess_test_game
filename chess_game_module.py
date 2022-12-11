@@ -184,7 +184,6 @@ class Chessboard:
                 if piece.root_name[0] == root.root_name[0]:
                     piece.rect = root.rect.copy()
                     root.kept = True
-        self.write_piece_positions()
 
     def __setup_board_with_fen(self):
         """Decodes the Forsyth Edwards Notation and setups new board konfig"""
@@ -256,12 +255,6 @@ class Chessboard:
         piece_tuple = self.__pieces[piece_sym]
         class_name = globals()[piece_tuple[0]]
         return class_name(piece_tuple[1], root_name, self.roots_dict)
-
-    def write_piece_positions(self):
-        pieces_root_names = []
-        for piece in Common.all_pieces:
-            pieces_root_names.append((piece.root_name, piece.color))
-        Common.pieces_positions = tuple(pieces_root_names)
 
     def __to_root_name(self, board_data_coord: tuple):
         """Returns the name of the root"""
@@ -430,6 +423,7 @@ class Chessboard:
                         self.__all_choices.empty()
                         Common.all_choosing_cells.empty()
                         Common.all_choosing_pieces.empty()
+                        self.__write_to_board_data()
                 if self.__clicked:
                     self.__move_or_select_piece(self.__released_root)
             if self.__taken_piece is not None:
@@ -492,7 +486,7 @@ class Chessboard:
         self.__all_selects.add(select)
 
     def __draw_available_roots(self, piece: Piece):
-        piece.check_movables()
+        piece.check_movables(True)
         print('mov', piece.movable_roots, 'tak', piece.takeable_roots)
         for available in piece.movable_roots:
             moving_dist = (available[0], available[1])
@@ -547,24 +541,20 @@ class Chessboard:
         piece.move_to_root(pawn)
         self.kill_piece(pawn)
         print('name', pawn.root_name)
-        self.__write_to_board_data(piece, pawn.root_name[1])
-        self.write_piece_positions()
         self.__check_check(piece)
         return piece
 
-    def __write_to_board_data(self, piece, pawn_pos):
-        value = piece.root_name[1][1] - 2
-        row = piece.root_name[1][0] - 2
-        if piece.prev_root_name is not None:
-            prev_value = letters.find(piece.prev_root_name[0][0])
-            prev_row = self.__count - int(piece.prev_root_name[0][1])
-            self.__board_data[prev_row][prev_value] = 0
-            self.__board_data[row][value] = piece.piece_name
-        else:
-            prev_value = pawn_pos[0] - 1
-            prev_row = pawn_pos[1] - 1
-            self.__board_data[prev_row][prev_value] = 0
-            self.__board_data[value][row] = piece.piece_name
+    def __write_to_board_data(self):
+        for root in Common.all_roots:
+            root_pos = root.root_name[1]
+            found_piece = None
+            for piece in Common.all_pieces:
+                if piece.root_name[1] == root.root_name[1]:
+                    found_piece = piece
+            if found_piece is not None:
+                self.__board_data[root_pos[1] - 1][root_pos[0] - 1] = found_piece.piece_name
+            else:
+                self.__board_data[root_pos[1] - 1][root_pos[0] - 1] = 0
 
         self.__write_fen_from_board()
 
@@ -590,12 +580,11 @@ class Chessboard:
         self.__check_check(piece)
         self.__new_created_piece = None
         self.__check_pat()
-        self.write_piece_positions()
         self.__change_turn()
-        self.__write_to_board_data(piece, None)
+        self.__write_to_board_data()
 
     def __pawns_after_move_logic(self, pawn: Pawn):
-        if pawn.root_name[1] == pawn.taking_on_the_pass:
+        if pawn.root_name[1] == pawn.taking_on_the_pass_move:
             self.kill_piece(self.__get_piece_by_piece_pos(pawn.passing_pawn_pos))
         if pawn.first_move and pawn.root_name[1][1] - pawn.prev_root_name[1][1] in [2, -2]:
             Common.other_map[2] = pawn.root_name[0]
@@ -604,7 +593,7 @@ class Chessboard:
                                     else 1):
             self.__choice = Choice(pawn)
             self.__choosing_pawn = pawn
-        pawn.taking_on_the_pass = None
+        pawn.taking_on_the_pass_move = None
         pawn.passing_pawn_pos = None
 
     def __kings_after_move_logic(self, king: King):
@@ -647,10 +636,10 @@ class Chessboard:
                                                 (-1 if castling_type == 'Short' else 1),
                                                 king.root_name[1][1]))
         rook.move_to_root(castling_root)
-        self.__write_to_board_data(rook, None)
+        self.__write_to_board_data()
 
     def __check_check(self, piece):
-        piece.check_movables()
+        piece.check_movables(False)
         king_pos = self.__get_piece_pos_by_name('K' if piece.color == 'b' else 'k')
         if king_pos in piece.takeable_roots:
             self.__check_logic()

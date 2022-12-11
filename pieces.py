@@ -69,17 +69,13 @@ class Piece(pg.sprite.Sprite):
             for piece in Common.all_pieces:
                 if piece.root_name[1] == root and piece.color != self.color:
                     self.takeable_roots.append(root)
-                    self.prob_check_roots.append(root)
                     new_movables.remove(root)
         self.movable_roots = new_movables
 
-        new_possible_movables = self.all_possible_roots.copy()
         for root in self.all_possible_roots:
             for piece in Common.all_pieces:
                 if piece.root_name[1] == root:
                     self.all_possible_takeable_roots.append(root)
-                    new_possible_movables.remove(root)
-        self.all_possible_roots = new_possible_movables
 
     def movable_checking_loop_with_continuing(self, movable_roots):
         for movable in movable_roots:
@@ -127,30 +123,30 @@ class Piece(pg.sprite.Sprite):
         pass
 
     def piece_color_check(self, offset):
-        for piece_pos in Common.pieces_positions:  # piece_pos looks like ((a1, (1, 1)), w)
-            if piece_pos[0][1] == offset:
-                if piece_pos[1] != self.color:
+        for piece in Common.all_pieces:  # piece_pos looks like ((a1, (1, 1)), w)
+            if piece.root_name[1] == offset:
+                if piece.color != self.color:
                     self.piece_color_break_check = True
                 else:
                     return False
         return True
 
     def piece_check_through_one(self, offset):
-        for piece_pos in Common.pieces_positions:  # piece_pos looks like ((a1, (1, 1)), w)
-            if piece_pos[0][1] == offset:
+        for piece in Common.all_pieces:  # piece_pos looks like ((a1, (1, 1)), w)
+            if piece.root_name[1] == offset:
                 self.piece_color_break_check = True
 
     def piece_check_on_path(self, offset):
-        for piece_pos in Common.pieces_positions:
-            if piece_pos[0][1] != offset:
+        for piece in Common.all_pieces:
+            if piece.root_name[1] != offset:
                 return True
         return False
 
     def specific_move_check(self, offset):
         for root in Common.all_roots:
             if root.root_name[1] == offset:
-                for piece in Common.pieces_positions:
-                    if piece[0][0] == root.root_name[0]:
+                for piece in Common.all_pieces:
+                    if piece.root_name[1] == root.root_name[1]:
                         return False
         return True
 
@@ -160,6 +156,44 @@ class Piece(pg.sprite.Sprite):
         # self.all_possible_roots = list(dict.fromkeys(self.all_possible_roots))
         # self.all_possible_takeable_roots = list(dict.fromkeys(self.all_possible_takeable_roots))
         print('prob check roots:', self.prob_check_roots)
+
+    def remove_future_checked_movables(self):
+        old_position = self.root_name
+        new_movables, new_takeables = self.movable_roots, self.takeable_roots
+        for movable in self.movable_roots + self.takeable_roots:
+            self.root_name = (self.root_name[0], movable)
+            for piece in Common.all_pieces:
+                if piece.color == ('w' if self.color == 'b' else 'b'):
+                    piece.check_movables(False)
+                    if piece.root_name[1] != self.root_name[1]:
+                        for prob_king in Common.all_pieces:
+                            if prob_king.piece_name == ('k' if self.color == 'b' else 'K'):
+                                if prob_king.root_name[1] in piece.takeable_roots:
+                                    (new_movables
+                                     if movable in new_movables
+                                     else new_takeables).remove(movable)
+        self.root_name = old_position
+        self.movable_roots = new_movables
+
+#         new_takeables = self.takeable_roots
+#         print(f"""
+# -------------------------------------
+# takeable roots: {self.takeable_roots}
+# -------------------------------------""")
+#         for takeable in self.takeable_roots:
+#             self.root_name = (self.root_name[0], takeable)
+#             for piece in Common.all_pieces:
+#                 if piece.color == ('w' if self.color == 'b' else 'b'):
+#                     new_all_pieces = Common.all_pieces.copy()
+#                     new_all_pieces.remove(piece)
+#                     for cut_piece in new_all_pieces:
+#                         cut_piece.check_movables(False)
+#                         for prob_king in new_all_pieces:
+#                             if prob_king.piece_name == ('k' if self.color == 'b' else 'K'):
+#                                 if prob_king.root_name[1] in cut_piece.takeable_roots:
+#                                     new_takeables.remove(takeable)
+#         self.root_name = old_position
+#         self.takeable_roots = new_takeables
 
 
 # noinspection PyTypeChecker
@@ -171,27 +205,31 @@ class King(Piece):
         self.is_long_castling_possible = True
         self.castling_roots = []
 
-    def check_movables(self):
+    def check_castling(self, move, castling_move):
+        if castling_move == (self.column - 2, self.row):
+            long_castling_check = self.specific_move_check((self.column - 3, self.row))
+        else:
+            long_castling_check = True
+
+        if (move in self.movable_roots and
+                self.is_long_castling_possible and
+                long_castling_check and
+                castling_move in self.roots_dict.values()
+                and self.piece_color_check(castling_move)):
+            self.movable_roots.append(castling_move)
+            self.castling_roots.append(castling_move)
+
+    def check_movables(self, do_check_checking):
         self.annul_roots()
 
         self.movables_checking_loop(self.movable_roots_r + self.movable_roots_b)
 
-        if ((self.column - 1, self.row) in self.movable_roots and
-                self.is_long_castling_possible and
-                self.specific_move_check((self.column - 3, self.row)) and
-                (self.column - 2, self.row) in self.roots_dict.values()
-                and self.piece_color_check((self.column - 2, self.row))):
-            self.movable_roots.append((self.column - 2, self.row))
-            self.castling_roots.append((self.column - 2, self.row))
-
-        if ((self.column + 1, self.row) in self.movable_roots and
-                self.is_short_castling_possible and
-                (self.column + 2, self.row) in self.roots_dict.values()
-                and self.piece_color_check((self.column + 2, self.row))):
-            self.movable_roots.append((self.column + 2, self.row))
-            self.castling_roots.append((self.column + 2, self.row))
+        self.check_castling((self.column - 1, self.row), (self.column - 2, self.row))
+        self.check_castling((self.column + 1, self.row), (self.column + 2, self.row))
 
         self.remove_duplicates_in_movables()
+        if do_check_checking:
+            self.remove_future_checked_movables()
 
 
 # noinspection PyTypeChecker
@@ -200,10 +238,12 @@ class Queen(Piece):
         super().__init__(color, root, '_queen.png', roots_dict)
         self.piece_name = 'Q' if color == 'w' else 'q'
 
-    def check_movables(self):
+    def check_movables(self, do_check_checking):
         self.annul_roots()
         self.movable_checking_loop_with_continuing(self.movable_roots_b + self.movable_roots_r)
         self.remove_duplicates_in_movables()
+        if do_check_checking:
+            self.remove_future_checked_movables()
 
 
 # noinspection PyTypeChecker
@@ -213,10 +253,12 @@ class Rook(Piece):
         self.piece_name = 'R' if color == 'w' else 'r'
         self.castling_pos = None
 
-    def check_movables(self):
+    def check_movables(self, do_check_checking):
         self.annul_roots()
         self.movable_checking_loop_with_continuing(self.movable_roots_r)
         self.remove_duplicates_in_movables()
+        if do_check_checking:
+            self.remove_future_checked_movables()
 
 
 # noinspection PyTypeChecker
@@ -225,10 +267,12 @@ class Bishop(Piece):
         super().__init__(color, root, '_bishop.png', roots_dict)
         self.piece_name = 'B' if color == 'w' else 'b'
 
-    def check_movables(self):
+    def check_movables(self, do_check_checking):
         self.annul_roots()
         self.movable_checking_loop_with_continuing(self.movable_roots_b)
         self.remove_duplicates_in_movables()
+        if do_check_checking:
+            self.remove_future_checked_movables()
 
 
 # noinspection PyTypeChecker
@@ -239,10 +283,12 @@ class Knight(Piece):
         self.movable_roots_n = [(-1, -2), (1, -2), (-2, -1), (2, -1),  # Up
                                 (-2, 1), (2, 1), (-1, 2), (1, 2)]  # Down
 
-    def check_movables(self):
+    def check_movables(self, do_check_checking):
         self.annul_roots()
         self.movables_checking_loop(self.movable_roots_n)
         self.remove_duplicates_in_movables()
+        if do_check_checking:
+            self.remove_future_checked_movables()
 
 
 # noinspection PyTypeChecker
@@ -250,45 +296,57 @@ class Pawn(Piece):
     def __init__(self, color: str, root: str, roots_dict):
         super().__init__(color, root, '_pawn.png', roots_dict)
         self.piece_name = 'P' if color == 'w' else 'p'
-        self.taking_on_the_pass = None
+        self.taking_on_the_pass_move = None
         self.passing_pawn_pos = None
         self.regular_move = None
         self.long_move = None
         self.taking_moves = []
-        self.passing_moves = []
+
+    def annul_roots(self):
+        self.movable_roots = []
+        self.takeable_roots = []
+        self.all_possible_roots = []
+        self.all_possible_takeable_roots = []
+        self.taking_on_the_pass_move = None
+        self.passing_pawn_pos = None
+        self.regular_move = None
+        self.long_move = None
+        self.taking_moves = []
 
     def __add_regular_move(self):
-        print('color', self.color)
         if (self.regular_move in self.roots_dict.values()
                 and self.specific_move_check(self.regular_move)):
             self.movable_roots.append(self.regular_move)
 
     def __add_long_move(self):
         if (self.first_move and self.long_move in self.roots_dict.values()
-                and self.specific_move_check(self.long_move)
-                and self.piece_color_check(self.long_move)):
+                and self.specific_move_check(self.regular_move)
+                and self.specific_move_check(self.long_move)):
             self.movable_roots.append(self.long_move)
+
+    def en_passant_check(self, passing_pawn, move):
+        if passing_pawn.root_name[1] == (move[0], move[1] + (1 if self.color == 'w' else -1)):
+            return True
+        return False
 
     def __add_taking_and_passing_moves(self):
         for index, move in enumerate(self.taking_moves):
-            print('move', move)
-            pawn_passing_name = None
+            passing_pawn = None
             for piece in Common.all_pieces:
                 if piece.piece_name == ('p' if self.color == 'w' else 'P'):
                     if piece.root_name[0] == Common.other_map[2]:
-                        pawn_passing_name = piece.root_name[0]
-            pawn_passing_check = (not self.specific_move_check(self.passing_moves[index])
-                                  and self.piece_color_check(self.passing_moves[index])
-                                  and pawn_passing_name is not None)
+                        passing_pawn = piece
+                        break
+            pawn_passing_check = (passing_pawn is not None
+                                  and self.en_passant_check(passing_pawn, move))
             if (move in self.roots_dict.values()
                     and (not self.specific_move_check(move)
                          or pawn_passing_check)
                     and self.piece_color_check(move)):
                 self.takeable_roots.append(move)
-                self.prob_check_roots.append(move)
                 if pawn_passing_check:
-                    self.taking_on_the_pass = move
-                    self.passing_pawn_pos = self.passing_moves[index]
+                    self.taking_on_the_pass_move = move
+                    self.passing_pawn_pos = passing_pawn.root_name[1]
 
     def __get_moves(self):
         self.regular_move = (self.column, self.row - 1) if self.color == 'w' else (self.column, self.row + 1)
@@ -300,15 +358,8 @@ class Pawn(Piece):
                              (self.column - 1, self.row - 1)
                              if self.color == 'w'
                              else (self.column + 1, self.row + 1)]
-        self.passing_moves = self.__get_passing_moves()
 
-    def __get_passing_moves(self):
-        output = []
-        for move in self.taking_moves:
-            output.append((move[0], move[1] + (1 if self.color == 'w' else -1)))
-        return output
-
-    def check_movables(self):
+    def check_movables(self, do_check_checking):
         self.annul_roots()
         self.__get_moves()
 
@@ -319,3 +370,5 @@ class Pawn(Piece):
         self.__add_taking_and_passing_moves()
 
         self.remove_duplicates_in_movables()
+        if do_check_checking:
+            self.remove_future_checked_movables()

@@ -252,59 +252,70 @@ class Pawn(Piece):
         self.piece_name = 'P' if color == 'w' else 'p'
         self.taking_on_the_pass = None
         self.passing_pawn_pos = None
+        self.regular_move = None
+        self.long_move = None
+        self.taking_moves = []
+        self.passing_moves = []
+
+    def __add_regular_move(self):
+        print('color', self.color)
+        if (self.regular_move in self.roots_dict.values()
+                and self.specific_move_check(self.regular_move)):
+            self.movable_roots.append(self.regular_move)
+
+    def __add_long_move(self):
+        if (self.first_move and self.long_move in self.roots_dict.values()
+                and self.specific_move_check(self.long_move)
+                and self.piece_color_check(self.long_move)):
+            self.movable_roots.append(self.long_move)
+
+    def __add_taking_and_passing_moves(self):
+        for index, move in enumerate(self.taking_moves):
+            print('move', move)
+            pawn_passing_name = None
+            for piece in Common.all_pieces:
+                if piece.piece_name == ('p' if self.color == 'w' else 'P'):
+                    if piece.root_name[0] == Common.other_map[2]:
+                        pawn_passing_name = piece.root_name[0]
+            pawn_passing_check = (not self.specific_move_check(self.passing_moves[index])
+                                  and self.piece_color_check(self.passing_moves[index])
+                                  and pawn_passing_name is not None)
+            if (move in self.roots_dict.values()
+                    and (not self.specific_move_check(move)
+                         or pawn_passing_check)
+                    and self.piece_color_check(move)):
+                self.takeable_roots.append(move)
+                self.prob_check_roots.append(move)
+                if pawn_passing_check:
+                    self.taking_on_the_pass = move
+                    self.passing_pawn_pos = self.passing_moves[index]
+
+    def __get_moves(self):
+        self.regular_move = (self.column, self.row - 1) if self.color == 'w' else (self.column, self.row + 1)
+        self.long_move = (self.column, self.row - 2) if self.color == 'w' else (self.column, self.row + 2)
+        self.taking_moves = [(self.column + 1, self.row - 1)
+                             if self.color == 'w'
+                             else (self.column - 1, self.row + 1),
+
+                             (self.column - 1, self.row - 1)
+                             if self.color == 'w'
+                             else (self.column + 1, self.row + 1)]
+        self.passing_moves = self.__get_passing_moves()
+
+    def __get_passing_moves(self):
+        output = []
+        for move in self.taking_moves:
+            output.append((move[0], move[1] + (1 if self.color == 'w' else -1)))
+        return output
 
     def check_movables(self):
         self.annul_roots()
+        self.__get_moves()
 
-        move = (self.column, self.row - 1) if self.color == 'w' else (self.column, self.row + 1)
-        if (move in self.roots_dict.values()
-                and self.specific_move_check(move)):
-            self.movable_roots.append(move)
+        self.__add_regular_move()
 
-        move = (self.column, self.row - 2) if self.color == 'w' else (self.column, self.row + 2)
-        if (self.first_move and move in self.roots_dict.values()
-                and self.specific_move_check(move)
-                and self.piece_color_check((move[0], move[1] + (1 if self.color == 'w' else -1)))):
-            self.movable_roots.append(move)
+        self.__add_long_move()
 
-        move = (self.column + 1, self.row - 1) if self.color == 'w' else (self.column - 1, self.row + 1)
-        pawn_passing_move = (move[0], move[1] + (1 if self.color == 'w' else -1))
-        pawn_passing_name = None
-        for piece in Common.all_pieces:
-            if piece.piece_name == ('p' if self.color == 'w' else 'P'):
-                if piece.root_name[0] == Common.other_map[2]:
-                    pawn_passing_name = piece.root_name[0]
-        pawn_passing_check = (not self.specific_move_check(pawn_passing_move)
-                              and self.piece_color_check(pawn_passing_move)
-                              and pawn_passing_name is not None)
-        if (move in self.roots_dict.values()
-                and (not self.specific_move_check(move)
-                     or pawn_passing_check)
-                and self.piece_color_check(move)):
-            self.takeable_roots.append(move)
-            self.prob_check_roots.append(move)
-            if pawn_passing_check:
-                self.taking_on_the_pass = move
-                self.passing_pawn_pos = pawn_passing_move
-
-        move = (self.column - 1, self.row - 1) if self.color == 'w' else (self.column + 1, self.row + 1)
-        pawn_passing_move = (move[0], move[1] + (1 if self.color == 'w' else -1))
-        pawn_passing_name = None
-        for piece in Common.all_pieces:
-            if piece.piece_name == ('p' if self.color == 'w' else 'P'):
-                if piece.root_name[0] == Common.other_map[2]:
-                    pawn_passing_name = piece.root_name[0]
-        pawn_passing_check = (not self.specific_move_check(pawn_passing_move)
-                              and self.piece_color_check(pawn_passing_move)
-                              and pawn_passing_name is not None)
-        if (move in self.roots_dict.values()
-                and (not self.specific_move_check(move)
-                     or pawn_passing_check)
-                and self.piece_color_check(move)):
-            self.takeable_roots.append(move)
-            self.prob_check_roots.append(move)
-            if pawn_passing_check:
-                self.taking_on_the_pass = move
-                self.passing_pawn_pos = pawn_passing_move
+        self.__add_taking_and_passing_moves()
 
         self.remove_duplicates_in_movables()

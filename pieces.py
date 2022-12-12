@@ -105,19 +105,19 @@ class Piece(pg.sprite.Sprite):
                     break
                 offset = (offset[0] + movable[0], offset[1] + movable[1])
 
-            collision_check = 0
-            offset = (self.column + movable[0], self.row + movable[1])
-            while True:
-                if offset in self.roots_dict_values:
-                    self.piece_check_through_one(offset)
-                    if self.piece_color_break_check:
-                        if collision_check == 1:
-                            self.prob_check_roots.append(offset)
-                        self.piece_color_break_check = False
-                        collision_check += 1
-                else:
-                    break
-                offset = (offset[0] + movable[0], offset[1] + movable[1])
+            # collision_check = 0
+            # offset = (self.column + movable[0], self.row + movable[1])
+            # while True:
+            #     if offset in self.roots_dict_values:
+            #         self.piece_check_through_one(offset)
+            #         if self.piece_color_break_check:
+            #             if collision_check == 1:
+            #                 self.prob_check_roots.append(offset)
+            #             self.piece_color_break_check = False
+            #             collision_check += 1
+            #     else:
+            #         break
+            #     offset = (offset[0] + movable[0], offset[1] + movable[1])
 
     def __check_check(self, offset):
         pass
@@ -151,11 +151,12 @@ class Piece(pg.sprite.Sprite):
         return True
 
     def remove_duplicates_in_movables(self):
+        pass
         # self.movable_roots = list(dict.fromkeys(self.movable_roots))
         # self.takeable_roots = list(dict.fromkeys(self.takeable_roots))
         # self.all_possible_roots = list(dict.fromkeys(self.all_possible_roots))
         # self.all_possible_takeable_roots = list(dict.fromkeys(self.all_possible_takeable_roots))
-        print(f'{self.piece_name}({self.root_name[1]}): \n\tmovables: {self.movable_roots} \n\ttakeables: {self.takeable_roots}')
+        # print(f'{self.piece_name}({self.root_name[1]}): \n\tmovables: {self.movable_roots} \n\ttakeables: {self.takeable_roots}')
 
     def remove_future_checked_movables(self):
         old_position = self.root_name
@@ -169,13 +170,13 @@ class Piece(pg.sprite.Sprite):
             for piece in Common.all_pieces:
                 if piece.color == ('w' if self.color == 'b' else 'b'):
                     piece.check_movables(False)
-                    if piece.root_name[1] != self.root_name[1]:
-                        for prob_king in Common.all_pieces:
-                            if prob_king.piece_name == ('k' if self.color == 'b' else 'K'):
-                                if prob_king.root_name[1] in piece.takeable_roots:
-                                    (new_movables
-                                     if movable in new_movables
-                                     else new_takeables).remove(movable)
+                    for prob_king in Common.all_pieces:
+                        if prob_king.piece_name == ('k' if self.color == 'b' else 'K'):
+                            if prob_king.root_name[1] in piece.takeable_roots:
+                                if movable in new_movables:
+                                    new_movables.remove(movable)
+                                elif movable in new_takeables:
+                                    new_takeables.remove(movable)
         Common.all_pieces = new_all_pieces
         self.root_name = old_position
         self.movable_roots = new_movables
@@ -189,16 +190,26 @@ class King(Piece):
         self.is_short_castling_possible = True
         self.is_long_castling_possible = True
         self.castling_roots = []
+        self.is_checked = False
 
     def check_castling(self, move, castling_move):
+        is_castling_possible = (self.is_long_castling_possible
+                                if castling_move == (self.column - 2, self.row)
+                                else self.is_short_castling_possible)
+        colors_and_sides = {'w': ('Q', 'K'),
+                            'b': ('q', 'k')}
+        is_in_fen = ((colors_and_sides[self.color]
+                                      [0 if castling_move == (self.column - 2, self.row)
+                                       else 1]) in Common.other_map[1])
         if castling_move == (self.column - 2, self.row):
             long_castling_check = self.specific_move_check((self.column - 3, self.row))
         else:
             long_castling_check = True
 
         if (move in self.movable_roots and
-                self.is_long_castling_possible and
+                is_castling_possible and
                 long_castling_check and
+                is_in_fen and
                 castling_move in self.roots_dict.values()
                 and self.piece_color_check(castling_move)):
             self.movable_roots.append(castling_move)
@@ -209,10 +220,12 @@ class King(Piece):
 
         self.movables_checking_loop(self.movable_roots_r + self.movable_roots_b)
 
+        self.remove_duplicates_in_movables()
+        if do_check_checking:
+            self.remove_future_checked_movables()
+
         self.check_castling((self.column - 1, self.row), (self.column - 2, self.row))
         self.check_castling((self.column + 1, self.row), (self.column + 2, self.row))
-
-        self.remove_duplicates_in_movables()
         if do_check_checking:
             self.remove_future_checked_movables()
 

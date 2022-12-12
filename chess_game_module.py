@@ -577,9 +577,9 @@ class Chessboard:
         if Common.other_map[1] == '':
             Common.other_map[1] = '-'
         piece.first_move = False
-        self.__check_check(piece)
         self.__new_created_piece = None
-        self.__check_pat()
+        self.__check_check(piece)
+        self.__check_mate(piece.color)
         self.__change_turn()
         self.__write_to_board_data()
 
@@ -605,16 +605,15 @@ class Chessboard:
                              self.__prev_piece_value[1][0] < 0 else 'Short')
         king.castling_roots = []
         self.__prev_piece_value = None
+        king.is_checked = False
 
     def __rooks_after_move_logic(self, rook: Rook):
         king_pos = self.__get_piece_pos_by_name('K' if rook.color == 'w' else 'k')
-        if king_pos is not None:
-            if (rook.first_move and
-                    rook.root_name[1][0] -
-                    king_pos[0] > 0):
-                Common.other_map[1] = Common.other_map[1].replace('K' if rook.color == 'w' else 'k', '')
-            else:
-                Common.other_map[1] = Common.other_map[1].replace('Q' if rook.color == 'w' else 'q', '')
+        if (rook.first_move and
+                rook.root_name[1][0] - king_pos[0] > 0):
+            Common.other_map[1] = Common.other_map[1].replace('K' if rook.color == 'w' else 'k', '')
+        else:
+            Common.other_map[1] = Common.other_map[1].replace('Q' if rook.color == 'w' else 'q', '')
 
     def __castling_logic(self):
         colors = {'whites': ('KQ', 'K', 'Q'), 'blacks': ('kq', 'k', 'q')}
@@ -640,16 +639,30 @@ class Chessboard:
 
     def __check_check(self, piece):
         piece.check_movables(False)
-        king_pos = self.__get_piece_pos_by_name('K' if piece.color == 'b' else 'k')
-        if king_pos in piece.takeable_roots:
-            self.__check_logic()
+        for prob_king in Common.all_pieces:
+            if prob_king.piece_name == ('k' if piece.color == 'w' else 'K'):
+                king = prob_king
+        if king.root_name[1] in piece.takeable_roots:
+            self.__check_logic(king)
 
-    def __check_logic(self):
+    def __check_logic(self, king: King):
         print('Check')
+        king.is_checked = True
 
-    def __check_pat(self):
-        pass
-
+    def __check_mate(self, color):
+        no_moves = True
+        for piece in Common.all_pieces:
+            if piece.color != color:
+                piece.check_movables(True)
+                if piece.movable_roots or piece.takeable_roots:
+                    no_moves = False
+        if no_moves:
+            for prob_king in Common.all_pieces:
+                if prob_king.piece_name == ('k' if color == 'b' else 'K'):
+                    if prob_king.is_checked:
+                        print('Mate')
+                    else:
+                        print('Stalemate')
 
     def __change_turn(self):
         self.__turn = 'w' if self.__turn == 'b' else 'b'

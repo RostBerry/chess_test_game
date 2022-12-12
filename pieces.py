@@ -168,8 +168,7 @@ class Piece(pg.sprite.Sprite):
                     if piece.root_name[1] != self.root_name[1]:
                         for prob_king in Common.all_pieces:
                             if prob_king.piece_name == ('k' if self.color == 'b' else 'K'):
-                                secondary_root_check = piece.piece_name == ('k' if self.color == 'b' else 'K')
-                                if prob_king.root_name[1] in piece.takeable_roots or secondary_root_check:
+                                if prob_king.root_name[1] in piece.takeable_roots:
                                     (new_movables
                                      if movable in new_movables
                                      else new_takeables).remove(movable)

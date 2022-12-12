@@ -168,32 +168,14 @@ class Piece(pg.sprite.Sprite):
                     if piece.root_name[1] != self.root_name[1]:
                         for prob_king in Common.all_pieces:
                             if prob_king.piece_name == ('k' if self.color == 'b' else 'K'):
-                                if prob_king.root_name[1] in piece.takeable_roots:
+                                secondary_root_check = piece.piece_name == ('k' if self.color == 'b' else 'K')
+                                if prob_king.root_name[1] in piece.takeable_roots or secondary_root_check:
                                     (new_movables
                                      if movable in new_movables
                                      else new_takeables).remove(movable)
+
         self.root_name = old_position
         self.movable_roots = new_movables
-
-#         new_takeables = self.takeable_roots
-#         print(f"""
-# -------------------------------------
-# takeable roots: {self.takeable_roots}
-# -------------------------------------""")
-#         for takeable in self.takeable_roots:
-#             self.root_name = (self.root_name[0], takeable)
-#             for piece in Common.all_pieces:
-#                 if piece.color == ('w' if self.color == 'b' else 'b'):
-#                     new_all_pieces = Common.all_pieces.copy()
-#                     new_all_pieces.remove(piece)
-#                     for cut_piece in new_all_pieces:
-#                         cut_piece.check_movables(False)
-#                         for prob_king in new_all_pieces:
-#                             if prob_king.piece_name == ('k' if self.color == 'b' else 'K'):
-#                                 if prob_king.root_name[1] in cut_piece.takeable_roots:
-#                                     new_takeables.remove(takeable)
-#         self.root_name = old_position
-#         self.takeable_roots = new_takeables
 
 
 # noinspection PyTypeChecker

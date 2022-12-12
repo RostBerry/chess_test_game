@@ -155,13 +155,17 @@ class Piece(pg.sprite.Sprite):
         # self.takeable_roots = list(dict.fromkeys(self.takeable_roots))
         # self.all_possible_roots = list(dict.fromkeys(self.all_possible_roots))
         # self.all_possible_takeable_roots = list(dict.fromkeys(self.all_possible_takeable_roots))
-        print('prob check roots:', self.prob_check_roots)
+        print(f'{self.piece_name}({self.root_name[1]}): \n\tmovables: {self.movable_roots} \n\ttakeables: {self.takeable_roots}')
 
     def remove_future_checked_movables(self):
         old_position = self.root_name
         new_movables, new_takeables = self.movable_roots, self.takeable_roots
+        new_all_pieces = Common.all_pieces.copy()
         for movable in self.movable_roots + self.takeable_roots:
             self.root_name = (self.root_name[0], movable)
+            for piece in new_all_pieces:
+                if piece.root_name[1] == self.root_name[1] and piece.piece_name != self.piece_name:
+                    Common.all_pieces.remove(piece)
             for piece in Common.all_pieces:
                 if piece.color == ('w' if self.color == 'b' else 'b'):
                     piece.check_movables(False)
@@ -172,7 +176,7 @@ class Piece(pg.sprite.Sprite):
                                     (new_movables
                                      if movable in new_movables
                                      else new_takeables).remove(movable)
-
+        Common.all_pieces = new_all_pieces
         self.root_name = old_position
         self.movable_roots = new_movables
 

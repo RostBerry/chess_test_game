@@ -8,6 +8,7 @@ class Menu:
         pg.display.set_caption('Main menu')
         self.__screen = screen
         self.__prepare_screen()
+        self.is_game_started = False
 
     def __prepare_screen(self):
         self.__screen.fill(BLACK)

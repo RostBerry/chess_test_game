@@ -11,48 +11,52 @@ pg.display.set_icon(pg.transform.scale(pg.image.load('assets/images/pieces/w_que
 chess = None
 options = None
 menu = Menu(screen)
-chess = Chessboard(screen)
 
 
 run = True
 try:
     while run:
+
+        if menu.is_game_started:
+            chess = Chessboard(screen)
+            menu.is_game_started = False
+
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 run = False
             if event.type == pg.MOUSEBUTTONDOWN:
                 if menu is not None:
-                    # menu mouse down
+                    menu.is_game_started = True
                 elif options is not None:
-                    # options mouse down
+                    pass
                 elif chess is not None:
                     chess.mouse_btn_down(event.button, event.pos)
             if event.type == pg.MOUSEBUTTONUP:
                 if menu is not None:
-                    # menu mouse up
+                    pass
                 elif options is not None:
-                    # options mouse up
+                    pass
                 elif chess is not None:
                     chess.mouse_btn_up(event.button, event.pos)
             if event.type == pg.MOUSEMOTION:
                 if menu is not None:
-                    # menu mouse motion
+                    pass
                 elif options is not None:
-                    # options mouse motion
+                    pass
                 elif chess is not None:
                     chess.drag(event.pos)
             if event.type == pg.KEYDOWN:
                 if menu is not None:
-                    # menu key down
+                    pass
                 elif options is not None:
-                    # options key down
+                    pass
                 elif chess is not None:
                     chess.keyboard_btn_down(event)
             if event.type == pg.KEYUP:
                 if menu is not None:
-                    # menu key up
+                    pass
                 elif options is not None:
-                    # options key up
+                    pass
                 elif chess is not None:
                     chess.keyboard_btn_up(event)
         clock.tick(FPS)

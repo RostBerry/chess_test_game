@@ -7,6 +7,7 @@ class Common:
     all_marks = pg.sprite.Group()
     all_choosing_pieces = pg.sprite.Group()
     all_choosing_cells = pg.sprite.Group()
+    all_buttons = pg.sprite.Group()
     pieces_map = []
     other_map = []
     pieces_positions = ()

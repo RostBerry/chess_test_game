@@ -1,5 +1,4 @@
 from chess_game_module import *
-from menu import *
 
 
 pg.init()
@@ -16,11 +15,6 @@ menu = Menu(screen)
 run = True
 try:
     while run:
-
-        if menu.is_game_started:
-            chess = Chessboard(screen)
-            menu.is_game_started = False
-
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 run = False
@@ -59,6 +53,11 @@ try:
                     pass
                 elif chess is not None:
                     chess.keyboard_btn_up(event)
+
+            if menu is not None:
+                if menu.is_game_started:
+                    chess = Chessboard(screen)
+                    menu = None
         clock.tick(FPS)
 except KeyboardInterrupt:
     pass

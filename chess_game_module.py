@@ -6,11 +6,54 @@ from common import *
 import random
 
 
+class Menu:
+    """Main menu class"""
+    def __init__(self, screen: pg.Surface):
+        pg.display.set_caption('Main menu')
+        self.__screen = screen
+        self.__play_button = None
+        self.__options_button = None
+        self.__quit_button = None
+        self.__background = None
+        self.__buttons_dict = {0: ('self.__play_button', 'Play'),
+                               1: ('self.__options_button', 'Options'),
+                               2: ('self.__quit_button', 'Quit')}
+        self.__prepare_screen()
+        self.is_game_started = False
+        self.__grand_update()
+
+    def __prepare_screen(self):
+        self.__background = pg.Surface(self.__screen.get_size())
+        self.__background.fill(BACKGROUND)
+        button_count = 3
+        btw_button_distance = 35
+        button_pos = (self.__screen.get_width() // 2 - MAIN_BTN_SIZE[0] // 2,
+                      self.__screen.get_height() // (button_count + 1))
+
+        for button in self.__buttons_dict:
+            globals()[self.__buttons_dict[button][0]] = Button(self.__buttons_dict[button][1], button_pos)
+            button_pos = (button_pos[0], button_pos[1] + MAIN_BTN_SIZE[1] + btw_button_distance)
+            Common.all_buttons.add(globals()[self.__buttons_dict[button][0]])
+
+    def __grand_update(self):
+        self.__screen.blit(self.__background, (0, 0))
+        Common.all_buttons.draw(self.__screen)
+        pg.display.update()
+
+
+class Button(pg.sprite.Sprite):
+    def __init__(self, btn_type: str, button_pos: tuple):
+        super().__init__()
+        self.image = pg.Surface(MAIN_BTN_SIZE)
+        self.image.fill(MAIN_BTN_COLOR)
+        self.rect = pg.Rect(button_pos, MAIN_BTN_SIZE)
+        pg.draw.rect(self.image, MAIN_BTN_STROKE_COLOR, (0, 0, self.rect.width, self.rect.height), 3)
+
+
 class Chessboard:
     """Main chessboard class"""
 
     def __init__(self, parent_surface: pg.Surface, root_count: int = ROOT_COUNT, root_size: int = ROOT_SIZE):
-        pg.display.set_caption('Chess Session')
         # Defining constants from the konfig or __init__ params
         self.__screen = parent_surface
         self.__count = root_count
@@ -21,6 +64,9 @@ class Chessboard:
         self.__chessboard_font_size = FONT_CHESSBOARD_SIZE
         self.__chessboard_font = pg.font.Font(FONT_CHESSBOARD_PATH, self.__chessboard_font_size)
         self.__text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
+        self.__background = None
+        self.__play_board_view = None
+        self.__play_board_view_pos = None
         # Defining sprite groups
         self.__all_pieces_list = []
         self.__all_selects = pg.sprite.Group()
@@ -50,6 +96,7 @@ class Chessboard:
         self.__func_keys = [pg.K_LCTRL, pg.K_RCTRL, pg.K_v, pg.K_RETURN, pg.K_BACKSPACE]
         self.__hotkey = {pg.K_LCTRL: False, pg.K_RCTRL: False, pg.K_v: False}
         # Initialization methods
+        pg.display.set_caption('Chess Session')
         self.__prepare_screen()
         self.__draw_play_board()
         self.__setup_board_with_fen()
@@ -69,11 +116,13 @@ class Chessboard:
 
     def __prepare_screen(self):
         """Draws background"""
-        background_img = Image.open(IMG_PATH + STATIC_IMG_PATH + BACKGROUND_IMG).resize(WINDOW_SIZE)
-        background_img = pg.image.fromstring(background_img.tobytes(),
-                                             background_img.size,
-                                             background_img.mode)
-        self.__screen.blit(background_img, (0, 0))
+        #background_img = Image.open(IMG_PATH + STATIC_IMG_PATH + BACKGROUND_IMG).resize(WINDOW_SIZE)
+        #background_img = pg.image.fromstring(background_img.tobytes(),
+                                             #background_img.size,
+                                             #background_img.mode)
+        self.__background = pg.Surface(self.__screen.get_size())
+        self.__background.fill(BACKGROUND)
+        self.__screen.blit(self.__background, (0, 0))
 
     def __draw_play_board(self):
         """Draws play board"""
@@ -82,29 +131,32 @@ class Chessboard:
         num_fields = self.__create_num_fields()
         Common.all_roots = self.__create_all_roots()
         num_fields_depth = num_fields[0].get_width()
-        play_board_view = pg.Surface((2 * num_fields_depth + total_width,
-                                     2 * num_fields_depth + total_width), pg.SRCALPHA).convert_alpha()
+        self.__play_board_view = pg.Surface((2 * num_fields_depth + total_width,
+                                             2 * num_fields_depth + total_width), pg.SRCALPHA)
 
-        board_background_img = Image.open(IMG_PATH +
-                                          STATIC_IMG_PATH +
-                                          BOARD_BACKGROUND_IMG).resize((play_board_view.get_width(),
-                                                                        play_board_view.get_height()))
-        board_background_img = pg.image.fromstring(board_background_img.tobytes(),
-                                                   board_background_img.size,
-                                                   board_background_img.mode)
+        #board_background_img = Image.open(IMG_PATH +
+                                          #STATIC_IMG_PATH +
+                                          #BOARD_BACKGROUND_IMG).resize((play_board_view.get_width(),
+                                                                        #play_board_view.get_height()))
+        #board_background_img = pg.image.fromstring(board_background_img.tobytes(),
+                                                   #board_background_img.size,
+                                                   #board_background_img.mode)
+        board_background_img = pg.Surface(self.__play_board_view.get_size())
+        board_background_img.fill(BOARD_BACKGROUND_COLOR)
 
         # Bind created objects to the main object
-        play_board_view.blit(board_background_img, (0, 0))
-        play_board_view.blit(num_fields[0], (0, num_fields_depth))
-        play_board_view.blit(num_fields[0], (num_fields_depth + total_width, num_fields_depth))
-        play_board_view.blit(num_fields[1], (num_fields_depth, 0))
-        play_board_view.blit(num_fields[1], (num_fields_depth, num_fields_depth + total_width))
+        self.__play_board_view.blit(board_background_img, (0, 0))
+        self.__play_board_view.blit(num_fields[0], (0, num_fields_depth))
+        self.__play_board_view.blit(num_fields[0], (num_fields_depth + total_width, num_fields_depth))
+        self.__play_board_view.blit(num_fields[1], (num_fields_depth, 0))
+        self.__play_board_view.blit(num_fields[1], (num_fields_depth, num_fields_depth + total_width))
 
         # Moves the board to the window center
-        play_board_rect = play_board_view.get_rect()
+        play_board_rect = self.__play_board_view.get_rect()
         play_board_rect.x += (self.__screen.get_width() - play_board_rect.width) // 2
         play_board_rect.y += (self.__screen.get_height() - play_board_rect.height) // 4
-        self.__screen.blit(play_board_view, play_board_rect)
+        self.__play_board_view_pos = (play_board_rect.x, play_board_rect.y)
+        self.__screen.blit(self.__play_board_view, play_board_rect)
         roots_coord_offset = (
             play_board_rect.x + num_fields_depth,
             play_board_rect.y + num_fields_depth,)
@@ -113,6 +165,7 @@ class Chessboard:
         self.__clipped_area = pg.rect.Rect(roots_coord_offset,
                                            (total_width,
                                             total_width))
+        pg.display.update()
 
         # Draws the input box below the board
         self.__draw_input_box(play_board_rect)
@@ -140,6 +193,7 @@ class Chessboard:
                 (rows.get_width() - number.get_rect().width) // 2,
                 i * self.__size + (self.__size - number.get_rect().height) // 2
             ))
+            pg.display.update()
 
         return rows, lines
 
@@ -160,6 +214,8 @@ class Chessboard:
                             root_name)
                 root_group.add(root)
                 root_color_order ^= True  # Changing the root color
+                pg.display.update()
+
             root_color_order = root_color_order ^ True if is_even_count else root_color_order
         return root_group
 
@@ -338,20 +394,14 @@ class Chessboard:
         """Works when the mouse is moving"""
         if self.__choice is not None:
             self.__colorize_choosing_cell(pos)
+
         elif self.__taken_piece is not None:
-            # Checks if the piece isn't moving outside the clipped area and moves it
-            if self.__fits_in_border(self.__taken_piece, pos):
-                self.__taken_piece.rect.center = pos
-            else:
-                self.__clicked = False  # Statement needed to correct root selection
-                self.__move_or_select_piece(self.__pressed_root)
+            self.__taken_piece.rect.center = pos
+
         elif self.__selected_piece is not None:
             if self.__can_drag:
-                if self.__fits_in_border(self.__selected_piece, pos):
-                    self.__selected_piece.rect.center = pos
-                else:
-                    self.__clicked = False  # Statement needed to correct root selection
-                    self.__move_or_select_piece(self.__pressed_root)
+                self.__selected_piece.rect.center = pos
+
         self.__grand_update()
 
     def mouse_btn_down(self, button_type: int, pos: tuple):
@@ -383,16 +433,12 @@ class Chessboard:
                     if self.__taken_piece.piece_name in ['k', 'K']:
                         self.__prev_piece_value = self.__taken_piece.root_name
                     self.__draw_available_roots(self.__taken_piece)
-                    # Checking if the piece wouldn't move outside the clipped area
-                    if self.__fits_in_border(self.__taken_piece, pos):
-                        self.__taken_piece.rect.center = pos
-                    else:
-                        pass
+
+                    self.__taken_piece.rect.center = pos
 
                 elif self.__selected_piece is not None:
-                    if self.__fits_in_border(self.__selected_piece, pos):
-                        self.__selected_piece.rect.center = pos
-                        self.__can_drag = True
+                    self.__selected_piece.rect.center = pos
+                    self.__can_drag = True
                     if self.__selected_piece.piece_name in ['k', 'K']:
                         self.__prev_piece_value = self.__selected_piece.root_name
 
@@ -407,28 +453,28 @@ class Chessboard:
     def mouse_btn_up(self, button_type: int, pos: tuple):
         """Works when the mouse btn is released"""
         self.__released_root = self.__get_root(pos)
+        if button_type == 1:  # LMB
+            self.__can_drag = False
         if self.__released_root is not None:
             if button_type == 3:  # RMB
                 self.__mark_root(self.__released_root)
-            if button_type == 1:  # LMB
-                self.__can_drag = False
-                if self.__choice is not None:
-                    self.__chosen_new_piece = self.__get_new_piece(self.__choosing_cell)
-                    if self.__chosen_new_piece is not None:
-                        new_piece_coords = self.__choosing_pawn.root_name
-                        self.__new_created_piece = self.__create_new_piece(self.__chosen_new_piece,
-                                                                           new_piece_coords,
-                                                                           self.__choosing_pawn)
-                        Common.all_pieces.add(self.__new_created_piece)
-                        self.__choice = None
-                        self.__all_choices.empty()
-                        Common.all_choosing_cells.empty()
-                        Common.all_choosing_pieces.empty()
-                        self.__write_to_board_data()
-                if self.__clicked:
-                    self.__move_or_select_piece(self.__released_root)
-            if self.__taken_piece is not None:
-                pass
+            if self.__choice is not None:
+                self.__chosen_new_piece = self.__get_new_piece(self.__choosing_cell)
+                if self.__chosen_new_piece is not None:
+                    new_piece_coords = self.__choosing_pawn.root_name
+                    self.__new_created_piece = self.__create_new_piece(self.__chosen_new_piece,
+                                                                       new_piece_coords,
+                                                                       self.__choosing_pawn)
+                    Common.all_pieces.add(self.__new_created_piece)
+                    self.__choice = None
+                    self.__all_choices.empty()
+                    Common.all_choosing_cells.empty()
+                    Common.all_choosing_pieces.empty()
+                    self.__write_to_board_data()
+            if self.__clicked:
+                self.__move_or_select_piece(self.__released_root)
+        else:
+            self.__move_or_select_piece(self.__pressed_root)
         self.__clicked = False
         self.__grand_update()
 
@@ -688,6 +734,8 @@ class Chessboard:
 
     def __grand_update(self):
         """Refreshes the whole scene on the screen"""
+        self.__screen.blit(self.__background, (0, 0))
+        self.__screen.blit(self.__play_board_view, self.__play_board_view_pos)
         Common.all_roots.draw(self.__screen)
         self.__all_input_boxes.draw(self.__screen)
         self.__all_selects.draw(self.__screen)
@@ -761,8 +809,10 @@ class Root(pg.sprite.Sprite):
         x, y = coordinates
         self.color = ROOT_COLORS[color_order]
         self.root_name = name
-        image = Image.open(IMG_PATH + self.color).resize((size, size))
-        self.image = pg.image.fromstring(image.tobytes(), image.size, image.mode)
+        #image = Image.open(IMG_PATH + self.color).resize((size, size))
+        #self.image = pg.image.fromstring(image.tobytes(), image.size, image.mode)
+        self.image = pg.Surface((size, size))
+        self.image.fill(self.color)
         self.rect = pg.Rect(x * size, y * size, size, size)
         self.mark = False
         self.is_selected = False

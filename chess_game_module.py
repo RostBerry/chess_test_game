@@ -10,6 +10,7 @@ class Chessboard:
     """Main chessboard class"""
 
     def __init__(self, parent_surface: pg.Surface, root_count: int = ROOT_COUNT, root_size: int = ROOT_SIZE):
+        pg.display.set_caption('Chess Session')
         # Defining constants from the konfig or __init__ params
         self.__screen = parent_surface
         self.__count = root_count
@@ -487,7 +488,7 @@ class Chessboard:
 
     def __draw_available_roots(self, piece: Piece):
         piece.check_movables(True)
-        print('mov', piece.movable_roots, 'tak', piece.takeable_roots)
+        #print('mov', piece.movable_roots, 'tak', piece.takeable_roots)
         for available in piece.movable_roots:
             moving_dist = (available[0], available[1])
             for root in Common.all_roots:
@@ -578,6 +579,7 @@ class Chessboard:
             Common.other_map[1] = '-'
         piece.first_move = False
         self.__new_created_piece = None
+        self.__uncheck_the_king(piece.color)
         self.__check_check(piece)
         self.__check_mate(piece.color)
         self.__change_turn()
@@ -605,7 +607,11 @@ class Chessboard:
                              self.__prev_piece_value[1][0] < 0 else 'Short')
         king.castling_roots = []
         self.__prev_piece_value = None
-        king.is_checked = False
+
+    def __uncheck_the_king(self, color):
+        for prob_king in Common.all_pieces:
+            if prob_king.piece_name == ('k' if color == 'w' else 'K'):
+                prob_king.is_checked = False
 
     def __rooks_after_move_logic(self, rook: Rook):
         king_pos = self.__get_piece_pos_by_name('K' if rook.color == 'w' else 'k')
@@ -658,7 +664,8 @@ class Chessboard:
                     no_moves = False
         if no_moves:
             for prob_king in Common.all_pieces:
-                if prob_king.piece_name == ('k' if color == 'b' else 'K'):
+                if prob_king.piece_name == ('k' if color == 'w' else 'K'):
+                    print(f'Color {prob_king.color}: {prob_king.is_checked}')
                     if prob_king.is_checked:
                         print('Mate')
                     else:

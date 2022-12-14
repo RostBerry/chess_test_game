@@ -11,32 +11,64 @@ class Menu:
     def __init__(self, screen: pg.Surface):
         pg.display.set_caption('Main menu')
         self.__screen = screen
+        self.is_game_started = False
+        self.__main_game_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
+        self.__main_game_text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE)
+        self.__main_game_text_stroke = None
+        self.__main_game_text = None
+        self.__main_text_stroke_pos = None
+        self.__main_text_pos = None
         self.__play_button = None
         self.__options_button = None
         self.__quit_button = None
+        self.__all_buttons_size = None
         self.__background = None
-        self.__buttons_dict = {0: ('self.__play_button', 'Play'),
-                               1: ('self.__options_button', 'Options'),
-                               2: ('self.__quit_button', 'Quit')}
         self.__prepare_screen()
-        self.is_game_started = False
         self.__grand_update()
 
     def __prepare_screen(self):
-        self.__background = pg.Surface(self.__screen.get_size())
-        self.__background.fill(BACKGROUND)
+        self.__draw_buttons()
+        self.__draw_main_text()
+
+    def __draw_buttons(self):
         button_count = 3
         btw_button_distance = 35
         button_pos = (self.__screen.get_width() // 2 - MAIN_BTN_SIZE[0] // 2,
                       self.__screen.get_height() // (button_count + 1))
 
-        for button in self.__buttons_dict:
-            globals()[self.__buttons_dict[button][0]] = Button(self.__buttons_dict[button][1], button_pos)
-            button_pos = (button_pos[0], button_pos[1] + MAIN_BTN_SIZE[1] + btw_button_distance)
-            Common.all_buttons.add(globals()[self.__buttons_dict[button][0]])
+        self.__play_button = Button('Play', button_pos)
+        button_pos = (button_pos[0], button_pos[1] + MAIN_BTN_SIZE[1] + btw_button_distance)
+        self.__options_button = Button('Options', button_pos)
+        button_pos = (button_pos[0], button_pos[1] + MAIN_BTN_SIZE[1] + btw_button_distance)
+        self.__quit_button = Button('Quit', button_pos)
+        self.__all_buttons_size = (MAIN_BTN_SIZE[0],
+                                   MAIN_BTN_SIZE[1] * button_count + btw_button_distance * button_count)
+        Common.all_buttons.add(self.__play_button, self.__options_button, self.__quit_button)
+
+    def __draw_main_text(self):
+        print(self.__screen.get_size(), self.__all_buttons_size)
+        self.__main_game_text_stroke = self.__main_game_text_stroke_font.render('CHESS',
+                                                                                True,
+                                                                                MAIN_STROKE_COLOR)
+        self.__main_game_text = self.__main_game_text_font.render('CHESS',
+                                                                  True,
+                                                                  MAIN_COLOR)
+        self.__main_text_stroke_pos = (self.__screen.get_width() // 2 -
+                                       self.__main_game_text_stroke.get_width() // 2,
+
+                                       (self.__screen.get_height() -
+                                       self.__all_buttons_size[1] -
+                                       self.__main_game_text_stroke.get_height()) // 6)
+
+        self.__main_text_pos = (self.__screen.get_width() // 2 - self.__main_game_text.get_width() // 2,
+                                (self.__screen.get_height() -
+                                self.__all_buttons_size[1] -
+                                self.__main_game_text.get_height()) // 6)
 
     def __grand_update(self):
-        self.__screen.blit(self.__background, (0, 0))
+        self.__screen.fill(BACKGROUND)
+        self.__screen.blit(self.__main_game_text_stroke, self.__main_text_stroke_pos)
+        self.__screen.blit(self.__main_game_text, self.__main_text_pos)
         Common.all_buttons.draw(self.__screen)
         pg.display.update()
 
@@ -45,9 +77,9 @@ class Button(pg.sprite.Sprite):
     def __init__(self, btn_type: str, button_pos: tuple):
         super().__init__()
         self.image = pg.Surface(MAIN_BTN_SIZE)
-        self.image.fill(MAIN_BTN_COLOR)
+        self.image.fill(MAIN_COLOR)
         self.rect = pg.Rect(button_pos, MAIN_BTN_SIZE)
-        pg.draw.rect(self.image, MAIN_BTN_STROKE_COLOR, (0, 0, self.rect.width, self.rect.height), 3)
+        pg.draw.rect(self.image, MAIN_STROKE_COLOR, (0, 0, self.rect.width, self.rect.height), 3)
 
 
 class Chessboard:
@@ -63,7 +95,7 @@ class Chessboard:
         self.__input_box_font_size = FONT_TEXT_SIZE
         self.__chessboard_font_size = FONT_CHESSBOARD_SIZE
         self.__chessboard_font = pg.font.Font(FONT_CHESSBOARD_PATH, self.__chessboard_font_size)
-        self.__text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
+        self.__text_font = pg.font.Font(FONT_TEXT_PATH, self.__input_box_font_size)
         self.__background = None
         self.__play_board_view = None
         self.__play_board_view_pos = None

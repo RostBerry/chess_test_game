@@ -1,11 +1,19 @@
+import pygame
+
 from chess_game_module import *
 
 
 pg.init()
+
 clock = pg.time.Clock()
 screen = pg.display.set_mode(WINDOW_SIZE)
-pg.display.set_icon(pg.transform.scale(pg.image.load('assets/images/pieces/w_queen.png').convert_alpha(),
-                                       (32, 32)))
+
+header_img = Image.open(IMG_PATH + PIECE_IMG_PATH + 'w_queen.png').resize((32, 32))
+pg.display.set_icon(pg.image.fromstring(header_img.tobytes(),header_img.size, header_img.mode))
+
+pg.mixer.music.load(MUSIC_PATH + BACKGROUND_MUSIC)
+pg.mixer.music.set_volume(0.3)
+pg.mixer.music.play(-1)
 
 chess = None
 options = None
@@ -20,7 +28,7 @@ try:
                 run = False
             if event.type == pg.MOUSEBUTTONDOWN:
                 if menu is not None:
-                    menu.is_game_started = True
+                    menu.mouse_btn_down(event.button, event.pos)
                 elif options is not None:
                     pass
                 elif chess is not None:
@@ -58,6 +66,11 @@ try:
                 if menu.is_game_started:
                     chess = Chessboard(screen)
                     menu = None
+                elif menu.is_options_started:
+                    options = Options(screen)
+                    menu = None
+                elif menu.is_quit:
+                    run = False
         clock.tick(FPS)
 except KeyboardInterrupt:
     pass

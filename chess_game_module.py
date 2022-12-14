@@ -12,6 +12,8 @@ class Menu:
         pg.display.set_caption('Main menu')
         self.__screen = screen
         self.is_game_started = False
+        self.is_options_started = False
+        self.is_quit = False
         self.__main_game_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
         self.__main_game_text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE)
         self.__main_game_text_stroke = None
@@ -36,17 +38,16 @@ class Menu:
         button_pos = (self.__screen.get_width() // 2 - MAIN_BTN_SIZE[0] // 2,
                       self.__screen.get_height() // (button_count + 1))
 
-        self.__play_button = Button('Play', button_pos)
+        self.__play_button = Button('PLAY', button_pos)
         button_pos = (button_pos[0], button_pos[1] + MAIN_BTN_SIZE[1] + btw_button_distance)
-        self.__options_button = Button('Options', button_pos)
+        self.__options_button = Button('OPTIONS', button_pos)
         button_pos = (button_pos[0], button_pos[1] + MAIN_BTN_SIZE[1] + btw_button_distance)
-        self.__quit_button = Button('Quit', button_pos)
+        self.__quit_button = Button('QUIT', button_pos)
         self.__all_buttons_size = (MAIN_BTN_SIZE[0],
                                    MAIN_BTN_SIZE[1] * button_count + btw_button_distance * button_count)
         Common.all_buttons.add(self.__play_button, self.__options_button, self.__quit_button)
 
     def __draw_main_text(self):
-        print(self.__screen.get_size(), self.__all_buttons_size)
         self.__main_game_text_stroke = self.__main_game_text_stroke_font.render('CHESS',
                                                                                 True,
                                                                                 MAIN_STROKE_COLOR)
@@ -65,6 +66,27 @@ class Menu:
                                 self.__all_buttons_size[1] -
                                 self.__main_game_text.get_height()) // 6)
 
+    def __get_button_on_click(self, pos):
+        for button in Common.all_buttons:
+            if button.rect.collidepoint(pos):
+                return button
+        return None
+
+    def mouse_btn_down(self, btn, pos):
+        if btn == 1:
+            clicked_button = self.__get_button_on_click(pos)
+            if clicked_button is not None:
+                if clicked_button.button_type == 'PLAY':
+                    self.is_game_started = True
+                elif clicked_button.button_type == 'OPTIONS':
+                    self.is_options_started = True
+                elif clicked_button.button_type == 'QUIT':
+                    self.is_quit = True
+                self.close()
+
+    def close(self):
+        Common.all_buttons.empty()
+
     def __grand_update(self):
         self.__screen.fill(BACKGROUND)
         self.__screen.blit(self.__main_game_text_stroke, self.__main_text_stroke_pos)
@@ -79,6 +101,11 @@ class Button(pg.sprite.Sprite):
         self.image = pg.Surface(MAIN_BTN_SIZE)
         self.image.fill(MAIN_COLOR)
         self.rect = pg.Rect(button_pos, MAIN_BTN_SIZE)
+        self.button_type = btn_type
+        self.text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_BUTTONS_SIZE)
+        self.text = self.text_font.render(self.button_type, True, MAIN_STROKE_COLOR)
+        self.image.blit(self.text, (self.image.get_width() // 2 - self.text.get_width() // 2,
+                                    self.image.get_height() // 2 - self.text.get_height() // 2))
         pg.draw.rect(self.image, MAIN_STROKE_COLOR, (0, 0, self.rect.width, self.rect.height), 3)
 
 
@@ -132,14 +159,14 @@ class Chessboard:
         self.__prepare_screen()
         self.__draw_play_board()
         self.__setup_board_with_fen()
-        self.__prepare_music()
+        # self.__prepare_music()
         self.__grand_update()
 
-    def __prepare_music(self):
-        """Creates a nice soundtrack"""
-        pg.mixer.music.load(MUSIC_PATH + BACKGROUND_MUSIC)
-        pg.mixer.music.set_volume(0.3)
-        pg.mixer.music.play(-1)
+    # def __prepare_music(self):
+    #     """Creates a nice soundtrack"""
+    #     pg.mixer.music.load(MUSIC_PATH + BACKGROUND_MUSIC)
+    #     pg.mixer.music.set_volume(0.3)
+    #     pg.mixer.music.play(-1)
 
     def __play_move_sound(self):
         """Activates when a piece have been moved"""

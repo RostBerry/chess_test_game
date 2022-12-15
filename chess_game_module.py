@@ -8,6 +8,7 @@ import random
 
 class Menu:
     """Main menu class"""
+
     def __init__(self, screen: pg.Surface):
         pg.display.set_caption('Main menu')
         self.__screen = screen
@@ -16,10 +17,8 @@ class Menu:
         self.is_quit = False
         self.__main_game_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
         self.__main_game_text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE)
-        self.__main_game_text_stroke = None
-        self.__main_game_text = None
-        self.__main_text_stroke_pos = None
-        self.__main_text_pos = None
+        self.__all_content = pg.Surface(self.__screen.get_size()).convert_alpha()
+        self.__all_content.fill((0, 0, 0, 0))
         self.__play_button = None
         self.__options_button = None
         self.__quit_button = None
@@ -48,23 +47,19 @@ class Menu:
         Common.all_buttons.add(self.__play_button, self.__options_button, self.__quit_button)
 
     def __draw_main_text(self):
-        self.__main_game_text_stroke = self.__main_game_text_stroke_font.render('CHESS',
-                                                                                True,
-                                                                                MAIN_STROKE_COLOR)
-        self.__main_game_text = self.__main_game_text_font.render('CHESS',
-                                                                  True,
-                                                                  MAIN_COLOR)
-        self.__main_text_stroke_pos = (self.__screen.get_width() // 2 -
-                                       self.__main_game_text_stroke.get_width() // 2,
+        main_game_text_stroke = self.__main_game_text_stroke_font.render('CHESS',
+                                                                         True,
+                                                                         MAIN_STROKE_COLOR)
+        main_game_text = self.__main_game_text_font.render('CHESS',
+                                                           True,
+                                                           MAIN_COLOR)
+        main_text_stroke_pos = (self.__screen.get_width() // 2 -
+                                main_game_text_stroke.get_width() // 2, 0)
 
-                                       (self.__screen.get_height() -
-                                       self.__all_buttons_size[1] -
-                                       self.__main_game_text_stroke.get_height()) // 6)
+        main_text_pos = (self.__screen.get_width() // 2 - main_game_text.get_width() // 2, 0)
 
-        self.__main_text_pos = (self.__screen.get_width() // 2 - self.__main_game_text.get_width() // 2,
-                                (self.__screen.get_height() -
-                                self.__all_buttons_size[1] -
-                                self.__main_game_text.get_height()) // 6)
+        self.__all_content.blit(main_game_text_stroke, main_text_stroke_pos)
+        self.__all_content.blit(main_game_text, main_text_pos)
 
     def __get_button_on_click(self, pos):
         for button in Common.all_buttons:
@@ -89,8 +84,7 @@ class Menu:
 
     def __grand_update(self):
         self.__screen.fill(BACKGROUND)
-        self.__screen.blit(self.__main_game_text_stroke, self.__main_text_stroke_pos)
-        self.__screen.blit(self.__main_game_text, self.__main_text_pos)
+        self.__screen.blit(self.__all_content, (0, 0))
         Common.all_buttons.draw(self.__screen)
         pg.display.update()
 
@@ -104,30 +98,30 @@ class Options(pg.sprite.Sprite):
         self.__main_text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE)
         self.__header_font = pg.font.Font(FONT_TEXT_PATH, FONT_HEADER_SIZE)
         self.__text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
+        self.__all_content = pg.Surface(self.__screen.get_size()).convert_alpha()
+        self.__all_content.fill((0, 0, 0, 0))
         self.__prepare_screen()
         self.__grand_update()
 
     def __prepare_screen(self):
-        self.__main_text_stroke = self.__main_text_stroke_font.render('OPTIONS',
-                                                                      True,
-                                                                    MAIN_STROKE_COLOR)
-        self.__main_text = self.__main_text_font.render('OPTIONS',
-                                                        True,
-                                                        MAIN_COLOR)
-        self.__main_text_pos = (self.__screen.get_width() // 2 -
-                                self.__main_text.get_width() // 2,
-                                self.__screen.get_height() // 2 -
-                                self.__screen.get_height() // 2)
+        main_text_stroke = self.__main_text_stroke_font.render('OPTIONS',
+                                                               True,
+                                                               MAIN_STROKE_COLOR)
+        main_text = self.__main_text_font.render('OPTIONS',
+                                                 True,
+                                                 MAIN_COLOR)
+        main_text_pos = (self.__screen.get_width() // 2 -
+                         main_text.get_width() // 2, 0)
 
-        self.__main_text_stroke_pos = (self.__screen.get_width() // 2 -
-                                       self.__main_text.get_width() // 2,
-                                       self.__screen.get_height() // 2 -
-                                       self.__screen.get_height() // 2)
+        main_text_stroke_pos = (self.__screen.get_width() // 2 -
+                                main_text_stroke.get_width() // 2, 0)
 
-
+        self.__all_content.blit(main_text_stroke, main_text_stroke_pos)
+        self.__all_content.blit(main_text, main_text_pos)
 
     def __grand_update(self):
         self.__screen.fill(BACKGROUND)
+        self.__screen.blit(self.__all_content, (0, 0))
         pg.display.update()
 
 
@@ -211,10 +205,10 @@ class Chessboard:
 
     def __prepare_screen(self):
         """Draws background"""
-        #background_img = Image.open(IMG_PATH + STATIC_IMG_PATH + BACKGROUND_IMG).resize(WINDOW_SIZE)
-        #background_img = pg.image.fromstring(background_img.tobytes(),
-                                             #background_img.size,
-                                             #background_img.mode)
+        # background_img = Image.open(IMG_PATH + STATIC_IMG_PATH + BACKGROUND_IMG).resize(WINDOW_SIZE)
+        # background_img = pg.image.fromstring(background_img.tobytes(),
+        # background_img.size,
+        # background_img.mode)
         self.__background = pg.Surface(self.__screen.get_size())
         self.__background.fill(BACKGROUND)
         self.__screen.blit(self.__background, (0, 0))
@@ -229,13 +223,13 @@ class Chessboard:
         self.__play_board_view = pg.Surface((2 * num_fields_depth + total_width,
                                              2 * num_fields_depth + total_width), pg.SRCALPHA)
 
-        #board_background_img = Image.open(IMG_PATH +
-                                          #STATIC_IMG_PATH +
-                                          #BOARD_BACKGROUND_IMG).resize((play_board_view.get_width(),
-                                                                        #play_board_view.get_height()))
-        #board_background_img = pg.image.fromstring(board_background_img.tobytes(),
-                                                   #board_background_img.size,
-                                                   #board_background_img.mode)
+        # board_background_img = Image.open(IMG_PATH +
+        # STATIC_IMG_PATH +
+        # BOARD_BACKGROUND_IMG).resize((play_board_view.get_width(),
+        # play_board_view.get_height()))
+        # board_background_img = pg.image.fromstring(board_background_img.tobytes(),
+        # board_background_img.size,
+        # board_background_img.mode)
         board_background_img = pg.Surface(self.__play_board_view.get_size())
         board_background_img.fill(BOARD_BACKGROUND_COLOR)
 
@@ -351,8 +345,8 @@ class Chessboard:
                 offset = 0
                 try:
                     for i in range(int(Common.pieces_map[row][value - piece_map_offset])):  # Placing the empty
-                        self.__board_data[row][value + i] = 0                              # roots if those have
-                        offset = i                                                        # been found
+                        self.__board_data[row][value + i] = 0  # roots if those have
+                        offset = i  # been found
                     value += offset
                     piece_map_offset += offset
                 except ValueError:  # Placing regular piece if the value in pieces map isn't an integer
@@ -480,8 +474,8 @@ class Chessboard:
         """Checks if the mouse isn't outside the borders"""
         if (self.__clipped_area.collidepoint(pos[0] - piece.rect.width // 2,
                                              pos[1] - piece.rect.height // 2)
-            and self.__clipped_area.collidepoint(pos[0] + piece.rect.width // 2,
-                                                 pos[1] + piece.rect.height // 2)):
+                and self.__clipped_area.collidepoint(pos[0] + piece.rect.width // 2,
+                                                     pos[1] + piece.rect.height // 2)):
             return True
         return False
 
@@ -629,7 +623,7 @@ class Chessboard:
 
     def __draw_available_roots(self, piece: Piece):
         piece.check_movables(True)
-        #print('mov', piece.movable_roots, 'tak', piece.takeable_roots)
+        # print('mov', piece.movable_roots, 'tak', piece.takeable_roots)
         for available in piece.movable_roots:
             moving_dist = (available[0], available[1])
             for root in Common.all_roots:
@@ -742,7 +736,8 @@ class Chessboard:
     def __kings_after_move_logic(self, king: King):
         king.is_long_castling_possible = False
         king.is_short_castling_possible = False
-        Common.other_map[1] = Common.other_map[1].replace('KQ' if king.color == 'w' else 'kq', '')
+        Common.other_map[1] = Common.other_map[1].replace('K' if king.color == 'w' else 'k', '')
+        Common.other_map[1] = Common.other_map[1].replace('Q' if king.color == 'w' else 'q', '')
         if king.root_name[1] in king.castling_roots:
             self.__do_castle(king, 'Long' if king.root_name[1][0] -
                              self.__prev_piece_value[1][0] < 0 else 'Short')
@@ -844,6 +839,7 @@ class Chessboard:
 
 class InputBox(pg.sprite.Sprite):
     """All the input boxes main class"""
+
     def __init__(self, board_rect: pg.Rect):
         super().__init__()
         x, y = board_rect.x, board_rect.y
@@ -904,8 +900,8 @@ class Root(pg.sprite.Sprite):
         x, y = coordinates
         self.color = ROOT_COLORS[color_order]
         self.root_name = name
-        #image = Image.open(IMG_PATH + self.color).resize((size, size))
-        #self.image = pg.image.fromstring(image.tobytes(), image.size, image.mode)
+        # image = Image.open(IMG_PATH + self.color).resize((size, size))
+        # self.image = pg.image.fromstring(image.tobytes(), image.size, image.mode)
         self.image = pg.Surface((size, size))
         self.image.fill(self.color)
         self.rect = pg.Rect(x * size, y * size, size, size)

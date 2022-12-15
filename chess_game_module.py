@@ -95,6 +95,42 @@ class Menu:
         pg.display.update()
 
 
+class Options(pg.sprite.Sprite):
+    def __init__(self, screen):
+        super().__init__()
+        pg.display.set_caption('Options')
+        self.__screen = screen
+        self.__main_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
+        self.__main_text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE)
+        self.__header_font = pg.font.Font(FONT_TEXT_PATH, FONT_HEADER_SIZE)
+        self.__text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
+        self.__prepare_screen()
+        self.__grand_update()
+
+    def __prepare_screen(self):
+        self.__main_text_stroke = self.__main_text_stroke_font.render('OPTIONS',
+                                                                      True,
+                                                                    MAIN_STROKE_COLOR)
+        self.__main_text = self.__main_text_font.render('OPTIONS',
+                                                        True,
+                                                        MAIN_COLOR)
+        self.__main_text_pos = (self.__screen.get_width() // 2 -
+                                self.__main_text.get_width() // 2,
+                                self.__screen.get_height() // 2 -
+                                self.__screen.get_height() // 2)
+
+        self.__main_text_stroke_pos = (self.__screen.get_width() // 2 -
+                                       self.__main_text.get_width() // 2,
+                                       self.__screen.get_height() // 2 -
+                                       self.__screen.get_height() // 2)
+
+
+
+    def __grand_update(self):
+        self.__screen.fill(BACKGROUND)
+        pg.display.update()
+
+
 class Button(pg.sprite.Sprite):
     def __init__(self, btn_type: str, button_pos: tuple):
         super().__init__()

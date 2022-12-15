@@ -15,7 +15,6 @@ class Menu:
         self.is_game_started = False
         self.is_options_started = False
         self.is_quit = False
-        self.__main_game_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
         self.__main_game_text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE)
         self.__all_content = pg.Surface(self.__screen.get_size()).convert_alpha()
         self.__all_content.fill((0, 0, 0, 0))
@@ -47,9 +46,10 @@ class Menu:
         Common.all_buttons.add(self.__play_button, self.__options_button, self.__quit_button)
 
     def __draw_main_text(self):
-        main_game_text_stroke = self.__main_game_text_stroke_font.render('CHESS',
-                                                                         True,
-                                                                         MAIN_STROKE_COLOR)
+        main_game_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
+        main_game_text_stroke = main_game_text_stroke_font.render('CHESS',
+                                                                  True,
+                                                                  MAIN_STROKE_COLOR)
         main_game_text = self.__main_game_text_font.render('CHESS',
                                                            True,
                                                            MAIN_COLOR)
@@ -79,6 +79,20 @@ class Menu:
                     self.is_quit = True
                 self.close()
 
+    def mouse_motion(self, pos):
+        self.__colorize_buttons(pos)
+
+    def __colorize_buttons(self, pos):
+        for button in Common.all_buttons:
+            color = button.second_color
+            if button.rect.collidepoint(pos):
+                button.second_color = SELECTED_COLOR
+            else:
+                button.second_color = MAIN_STROKE_COLOR
+            if button.second_color != color:
+                button.update()
+                self.__grand_update()
+
     def close(self):
         Common.all_buttons.empty()
 
@@ -94,7 +108,6 @@ class Options(pg.sprite.Sprite):
         super().__init__()
         pg.display.set_caption('Options')
         self.__screen = screen
-        self.__main_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
         self.__main_text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE)
         self.__header_font = pg.font.Font(FONT_TEXT_PATH, FONT_HEADER_SIZE)
         self.__text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
@@ -104,9 +117,10 @@ class Options(pg.sprite.Sprite):
         self.__grand_update()
 
     def __prepare_screen(self):
-        main_text_stroke = self.__main_text_stroke_font.render('OPTIONS',
-                                                               True,
-                                                               MAIN_STROKE_COLOR)
+        main_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
+        main_text_stroke = main_text_stroke_font.render('OPTIONS',
+                                                        True,
+                                                        MAIN_STROKE_COLOR)
         main_text = self.__main_text_font.render('OPTIONS',
                                                  True,
                                                  MAIN_COLOR)
@@ -118,6 +132,9 @@ class Options(pg.sprite.Sprite):
 
         self.__all_content.blit(main_text_stroke, main_text_stroke_pos)
         self.__all_content.blit(main_text, main_text_pos)
+
+    def mouse_btn_down(self, button, pos):
+        pass
 
     def __grand_update(self):
         self.__screen.fill(BACKGROUND)
@@ -132,11 +149,18 @@ class Button(pg.sprite.Sprite):
         self.image.fill(MAIN_COLOR)
         self.rect = pg.Rect(button_pos, MAIN_BTN_SIZE)
         self.button_type = btn_type
+        self.second_color = MAIN_STROKE_COLOR
         self.text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_BUTTONS_SIZE)
-        self.text = self.text_font.render(self.button_type, True, MAIN_STROKE_COLOR)
+        self.text = None
+        self.update()
+
+
+    def update(self):
+        self.image.fill(MAIN_COLOR)
+        self.text = self.text_font.render(self.button_type, True, self.second_color)
         self.image.blit(self.text, (self.image.get_width() // 2 - self.text.get_width() // 2,
                                     self.image.get_height() // 2 - self.text.get_height() // 2))
-        pg.draw.rect(self.image, MAIN_STROKE_COLOR, (0, 0, self.rect.width, self.rect.height), 3)
+        pg.draw.rect(self.image, self.second_color, (0, 0, self.rect.width, self.rect.height), 3)
 
 
 class Chessboard:

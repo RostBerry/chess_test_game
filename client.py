@@ -4,6 +4,9 @@ import socket
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect((HOST, PORT))
 
+data = client.recv(1024)
+print(data.decode('utf-8'))
+
 while True:
     data = client.recv(1024)
     print(data.decode('utf-8'))

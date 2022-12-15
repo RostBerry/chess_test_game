@@ -30,7 +30,7 @@ try:
                 if menu is not None:
                     menu.mouse_btn_down(event.button, event.pos)
                 elif options is not None:
-                    pass
+                    options.mouse_btn_down(event.button, event.pos)
                 elif chess is not None:
                     chess.mouse_btn_down(event.button, event.pos)
             if event.type == pg.MOUSEBUTTONUP:
@@ -42,7 +42,7 @@ try:
                     chess.mouse_btn_up(event.button, event.pos)
             if event.type == pg.MOUSEMOTION:
                 if menu is not None:
-                    pass
+                    menu.mouse_motion(event.pos)
                 elif options is not None:
                     pass
                 elif chess is not None:

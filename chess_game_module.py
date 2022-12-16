@@ -6,6 +6,17 @@ from common import *
 import random
 
 
+def colorize_buttons(pos):
+    for button in Common.all_buttons:
+        color = button.second_color
+        if button.rect.collidepoint(pos):
+            button.second_color = SELECTED_COLOR
+        else:
+            button.second_color = MAIN_STROKE_COLOR
+        if button.second_color != color:
+            button.update()
+
+
 class Menu:
     """Main menu class"""
 
@@ -80,18 +91,8 @@ class Menu:
                 self.close()
 
     def mouse_motion(self, pos):
-        self.__colorize_buttons(pos)
-
-    def __colorize_buttons(self, pos):
-        for button in Common.all_buttons:
-            color = button.second_color
-            if button.rect.collidepoint(pos):
-                button.second_color = SELECTED_COLOR
-            else:
-                button.second_color = MAIN_STROKE_COLOR
-            if button.second_color != color:
-                button.update()
-                self.__grand_update()
+        colorize_buttons(pos)
+        self.__grand_update()
 
     def close(self):
         Common.all_buttons.empty()
@@ -148,7 +149,7 @@ class Button(pg.sprite.Sprite):
         super().__init__()
         self.image = pg.Surface(size)
         self.image.fill(MAIN_COLOR)
-        self.rect = pg.Rect(button_pos, MAIN_BTN_SIZE)
+        self.rect = pg.Rect(button_pos, size)
         self.button_type = btn_type
         self.second_color = MAIN_STROKE_COLOR
         self.text_font = pg.font.Font(FONT_TEXT_PATH, font_size)
@@ -166,7 +167,8 @@ class Button(pg.sprite.Sprite):
 class Chessboard:
     """Main chessboard class"""
 
-    def __init__(self, parent_surface: pg.Surface, root_count: int = ROOT_COUNT, root_size: int = ROOT_SIZE):
+    def __init__(self, parent_surface: pg.Surface, root_count: int = ROOT_COUNT,
+                 root_size: int = ROOT_SIZE):
         # Defining constants from the konfig or __init__ params
         self.__screen = parent_surface
         self.__count = root_count
@@ -190,6 +192,7 @@ class Chessboard:
         # Defining interactive objects or variables
         self.roots_dict = {}
         self.__input_box = None
+        self.__flip_button = None
         self.__choice = None
         self.__choosing_cell = None
         self.__choosing_pawn = None
@@ -293,7 +296,8 @@ class Chessboard:
         self.__flip_button = Button('FLIP', (self.__input_box.rect.x +
                                              self.__input_box.rect.width,
                                              self.__input_box.rect.y),
-                                    (30, 30), 24)
+                                    (self.__input_box.rect.height,
+                                     self.__input_box.rect.height), 16)
         Common.all_buttons.add(self.__flip_button)
 
     def __create_num_fields(self):
@@ -502,15 +506,6 @@ class Chessboard:
             if piece.root_name[1] == piece_pos:
                 return piece
 
-    def __fits_in_border(self, piece, pos):
-        """Checks if the mouse isn't outside the borders"""
-        if (self.__clipped_area.collidepoint(pos[0] - piece.rect.width // 2,
-                                             pos[1] - piece.rect.height // 2)
-                and self.__clipped_area.collidepoint(pos[0] + piece.rect.width // 2,
-                                                     pos[1] + piece.rect.height // 2)):
-            return True
-        return False
-
     def drag(self, pos: tuple):
         """Works when the mouse is moving"""
         if self.__choice is not None:
@@ -523,6 +518,9 @@ class Chessboard:
             if self.__can_drag:
                 self.__selected_piece.rect.center = pos
 
+        else:
+            colorize_buttons(pos)
+
         self.__grand_update()
 
     def mouse_btn_down(self, button_type: int, pos: tuple):
@@ -534,6 +532,8 @@ class Chessboard:
                 self.__choosing_cell = self.__get_choosing_cell_on_click(pos)
                 if self.__choosing_cell is not None:
                     self.__chosen_new_piece = self.__get_new_piece(self.__choosing_cell)
+            elif self.__flip_button is not None:
+                self.__flip()
             else:
                 self.__pressed_root = (self.__get_root(pos)
                                        if self.__selected_piece is None
@@ -635,6 +635,10 @@ class Chessboard:
             self.__hotkey[pg.K_RCTRL] = False
         if event.key == pg.K_v:
             self.__hotkey[pg.K_v] = False
+
+    def __flip(self):
+        Common.pieces_map[0] = Common.pieces_map[0][::-1]
+        self.__setup_board()
 
     def __mark_root(self, root):
         """Draws a green circle on the clicked root"""

@@ -637,8 +637,10 @@ class Chessboard:
             self.__hotkey[pg.K_v] = False
 
     def __flip(self):
-        Common.pieces_map[0] = Common.pieces_map[0][::-1]
-        self.__setup_board()
+        print(Common.pieces_map)
+        Common.pieces_map = Common.pieces_map[::-1]
+        print(Common.pieces_map)
+        self.__setup_board_with_fen()
 
     def __mark_root(self, root):
         """Draws a green circle on the clicked root"""

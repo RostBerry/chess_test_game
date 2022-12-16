@@ -143,17 +143,17 @@ class Options(pg.sprite.Sprite):
 
 
 class Button(pg.sprite.Sprite):
-    def __init__(self, btn_type: str, button_pos: tuple):
+    def __init__(self, btn_type: str, button_pos: tuple,
+                 size: tuple = MAIN_BTN_SIZE, font_size: int = FONT_MAIN_BUTTONS_SIZE):
         super().__init__()
-        self.image = pg.Surface(MAIN_BTN_SIZE)
+        self.image = pg.Surface(size)
         self.image.fill(MAIN_COLOR)
         self.rect = pg.Rect(button_pos, MAIN_BTN_SIZE)
         self.button_type = btn_type
         self.second_color = MAIN_STROKE_COLOR
-        self.text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_BUTTONS_SIZE)
+        self.text_font = pg.font.Font(FONT_TEXT_PATH, font_size)
         self.text = None
         self.update()
-
 
     def update(self):
         self.image.fill(MAIN_COLOR)
@@ -282,11 +282,19 @@ class Chessboard:
 
         # Draws the input box below the board
         self.__draw_input_box(play_board_rect)
+        self.__draw_all_buttons()
 
     def __draw_input_box(self, board_rect: pg.Rect):
         """Draws input box in the bottom"""
         self.__input_box = InputBox(board_rect)
         self.__all_input_boxes.add(self.__input_box)
+
+    def __draw_all_buttons(self):
+        self.__flip_button = Button('FLIP', (self.__input_box.rect.x +
+                                             self.__input_box.rect.width,
+                                             self.__input_box.rect.y),
+                                    (30, 30), 24)
+        Common.all_buttons.add(self.__flip_button)
 
     def __create_num_fields(self):
         """Creates the rows and lines near the board (like 1-8, a-g)"""
@@ -852,6 +860,7 @@ class Chessboard:
         self.__screen.blit(self.__play_board_view, self.__play_board_view_pos)
         Common.all_roots.draw(self.__screen)
         self.__all_input_boxes.draw(self.__screen)
+        Common.all_buttons.draw(self.__screen)
         self.__all_selects.draw(self.__screen)
         self.__all_checks.draw(self.__screen)
         Common.all_marks.draw(self.__screen)
@@ -881,12 +890,12 @@ class InputBox(pg.sprite.Sprite):
     def activate(self):
         """Activates the input box"""
         self.active = True
-        pg.draw.rect(self.image, INPUT_FONT_COLOR, (0, 0, self.rect.width, self.rect.height), 2)
+        pg.draw.rect(self.image, MAIN_STROKE_COLOR, (0, 0, self.rect.width, self.rect.height), 2)
 
     def deactivate(self):
         """Deactivates the input box"""
         self.active = False
-        pg.draw.rect(self.image, WHITE, (0, 0, self.rect.width, self.rect.height), 2)
+        pg.draw.rect(self.image, MAIN_COLOR, (0, 0, self.rect.width, self.rect.height), 2)
 
     def put_char(self, char: str):
         """Adds the symbol to the input box"""
@@ -900,11 +909,11 @@ class InputBox(pg.sprite.Sprite):
 
     def __update_text(self):
         """Updates the input box if any changes have been made"""
-        self.image.fill(BLACK)
+        self.image.fill(MAIN_COLOR)
         pg.draw.rect(self.image,
-                     INPUT_FONT_COLOR if self.active else WHITE,
+                     MAIN_STROKE_COLOR if self.active else MAIN_COLOR,
                      (0, 0, self.rect.width, self.rect.height), 2)
-        self.__fen_text = self.input_box_font.render(self.text, True, INPUT_FONT_COLOR)
+        self.__fen_text = self.input_box_font.render(self.text, True, BLACK)
         self.__adapt_text()
         self.image.blit(self.__fen_text, (9, 9))
 
@@ -913,7 +922,7 @@ class InputBox(pg.sprite.Sprite):
                 self.__fen_text.get_rect().height + 14 > self.rect.height):
             self.input_box_font_size -= 1
             self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_size)
-            self.__fen_text = self.input_box_font.render(self.text, True, INPUT_FONT_COLOR)
+            self.__fen_text = self.input_box_font.render(self.text, True, BLACK)
 
 
 class Root(pg.sprite.Sprite):

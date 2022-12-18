@@ -1,20 +1,98 @@
-from konfig import *
 from common import *
 from PIL import Image
 
+pg.init()
+screen = pg.display.set_mode(WINDOW_SIZE)
+
+# Pictures declaration
+B_KING_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'b_king.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+W_KING_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'w_king.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+B_QUEEN_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'b_queen.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+W_QUEEN_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'w_queen.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+B_ROOK_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'b_rook.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+W_ROOK_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'w_rook.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+B_BISHOP_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'b_bishop.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+W_BISHOP_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'w_bishop.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+B_KNIGHT_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'b_knight.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+W_KNIGHT_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'w_knight.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+B_PAWN_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'b_pawn.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+W_PAWN_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
+                                                     PIECE_IMG_PATH +
+                                                     'w_pawn.png').resize((ROOT_SIZE,
+                                                                           ROOT_SIZE))).tobytes(),
+                                 image.size, image.mode).convert_alpha()
+
+
+PIECES_IMG_DICT = {'w_king': W_KING_IMG, 'b_king': B_KING_IMG,
+                   'w_queen': W_QUEEN_IMG, 'b_queen': B_QUEEN_IMG,
+                   'w_rook': W_ROOK_IMG, 'b_rook': B_ROOK_IMG,
+                   'w_bishop': W_BISHOP_IMG, 'b_bishop': B_BISHOP_IMG,
+                   'w_knight': W_KNIGHT_IMG, 'b_knight': B_KNIGHT_IMG,
+                   'w_pawn': W_PAWN_IMG, 'b_pawn': B_PAWN_IMG}
 
 # noinspection PyTypeChecker
 class Piece(pg.sprite.Sprite):
     """Main piece class"""
 
-    def __init__(self, color: str, root_name: str, file_postfix: str, roots_dict: dict):
+    def __init__(self, color: str, root_name: str, file_postfix: str):
         super().__init__()
-        image = Image.open(IMG_PATH +
-                           PIECE_IMG_PATH +
-                           color +
-                           file_postfix).resize((ROOT_SIZE, ROOT_SIZE))
         self.rect = image.size
-        self.image = pg.image.fromstring(image.tobytes(), image.size, image.mode).convert_alpha()
+        self.image = PIECES_IMG_DICT[color + file_postfix]
         self.color = color
         self.prev_root_name = None
         self.root_name = root_name
@@ -33,9 +111,8 @@ class Piece(pg.sprite.Sprite):
         self.prob_check_roots = []
         self.all_roots = Common.all_roots
         self.piece_color_break_check = False
-        self.roots_dict = roots_dict
-        self.roots_dict_keys = list(self.roots_dict.keys())
-        self.roots_dict_values = list(self.roots_dict.values())
+        self.roots_dict_keys = list(Common.roots_dict.keys())
+        self.roots_dict_values = list(Common.roots_dict.values())
 
     def move_to_root(self, root):
         """Moves the piece to the root"""
@@ -60,7 +137,7 @@ class Piece(pg.sprite.Sprite):
     def movables_checking_loop(self, movables):
         for prob_movable in movables:
             offset = (self.column + prob_movable[0], self.row + prob_movable[1])
-            if offset in self.roots_dict.values():
+            if offset in Common.roots_dict.values():
                 self.all_possible_roots.append(offset)
                 if self.piece_color_check(offset):
                     self.movable_roots.append(offset)
@@ -184,8 +261,8 @@ class Piece(pg.sprite.Sprite):
 
 # noinspection PyTypeChecker
 class King(Piece):
-    def __init__(self, color: str, root: str, roots_dict):
-        super().__init__(color, root, '_king.png', roots_dict)
+    def __init__(self, color: str, root: str):
+        super().__init__(color, root, '_king')
         self.piece_name = 'K' if color == 'w' else 'k'
         self.is_short_castling_possible = True
         self.is_long_castling_possible = True
@@ -210,7 +287,7 @@ class King(Piece):
                 is_castling_possible and
                 long_castling_check and
                 is_in_fen and
-                castling_move in self.roots_dict.values()
+                castling_move in Common.roots_dict.values()
                 and self.piece_color_check(castling_move)):
             self.movable_roots.append(castling_move)
             self.castling_roots.append(castling_move)
@@ -232,8 +309,8 @@ class King(Piece):
 
 # noinspection PyTypeChecker
 class Queen(Piece):
-    def __init__(self, color: str, root: str, roots_dict):
-        super().__init__(color, root, '_queen.png', roots_dict)
+    def __init__(self, color: str, root: str):
+        super().__init__(color, root, '_queen')
         self.piece_name = 'Q' if color == 'w' else 'q'
 
     def check_movables(self, do_check_checking):
@@ -246,8 +323,8 @@ class Queen(Piece):
 
 # noinspection PyTypeChecker
 class Rook(Piece):
-    def __init__(self, color: str, root: str, roots_dict):
-        super().__init__(color, root, '_rook.png', roots_dict)
+    def __init__(self, color: str, root: str):
+        super().__init__(color, root, '_rook')
         self.piece_name = 'R' if color == 'w' else 'r'
         self.castling_pos = None
 
@@ -261,8 +338,8 @@ class Rook(Piece):
 
 # noinspection PyTypeChecker
 class Bishop(Piece):
-    def __init__(self, color: str, root: str, roots_dict):
-        super().__init__(color, root, '_bishop.png', roots_dict)
+    def __init__(self, color: str, root: str):
+        super().__init__(color, root, '_bishop')
         self.piece_name = 'B' if color == 'w' else 'b'
 
     def check_movables(self, do_check_checking):
@@ -275,8 +352,8 @@ class Bishop(Piece):
 
 # noinspection PyTypeChecker
 class Knight(Piece):
-    def __init__(self, color: str, root: str, roots_dict):
-        super().__init__(color, root, '_knight.png', roots_dict)
+    def __init__(self, color: str, root: str):
+        super().__init__(color, root, '_knight')
         self.piece_name = 'N' if color == 'w' else 'n'
         self.movable_roots_n = [(-1, -2), (1, -2), (-2, -1), (2, -1),  # Up
                                 (-2, 1), (2, 1), (-1, 2), (1, 2)]  # Down
@@ -291,13 +368,16 @@ class Knight(Piece):
 
 # noinspection PyTypeChecker
 class Pawn(Piece):
-    def __init__(self, color: str, root: str, roots_dict):
-        super().__init__(color, root, '_pawn.png', roots_dict)
+    def __init__(self, color: str, root: str):
+        super().__init__(color, root, '_pawn')
         self.piece_name = 'P' if color == 'w' else 'p'
         self.taking_on_the_pass_move = None
         self.passing_pawn_pos = None
-        self.regular_move = None
-        self.long_move = None
+        self.regular_move = ((self.column, self.row - 1) if self.color == 'w' else (self.column, self.row + 1)
+                             if not Common.is_flipped else
+                             (self.column, self.row + 1) if self.color == 'w' else (self.column, self.row - 1))
+        self.regular_move_pos = None
+        self.long_move_pos = None
         self.taking_moves = []
 
     def annul_roots(self):
@@ -307,20 +387,21 @@ class Pawn(Piece):
         self.all_possible_takeable_roots = []
         self.taking_on_the_pass_move = None
         self.passing_pawn_pos = None
-        self.regular_move = None
-        self.long_move = None
+        self.regular_move_pos = None
+        self.long_move_pos = None
         self.taking_moves = []
 
     def __add_regular_move(self):
-        if (self.regular_move in self.roots_dict.values()
-                and self.specific_move_check(self.regular_move)):
-            self.movable_roots.append(self.regular_move)
+        if (self.regular_move_pos in Common.roots_dict.values()
+                and self.specific_move_check(self.regular_move_pos)):
+            self.movable_roots.append(self.regular_move_pos)
 
     def __add_long_move(self):
-        if (self.first_move and self.long_move in self.roots_dict.values()
-                and self.specific_move_check(self.regular_move)
-                and self.specific_move_check(self.long_move)):
-            self.movable_roots.append(self.long_move)
+        if (self.row == (2 if self.color == 'b' else ROOT_COUNT - 1)
+                and self.long_move_pos in Common.roots_dict.values()
+                and self.specific_move_check(self.regular_move_pos)
+                and self.specific_move_check(self.long_move_pos)):
+            self.movable_roots.append(self.long_move_pos)
 
     def en_passant_check(self, passing_pawn, move):
         if passing_pawn.root_name[1] == (move[0], move[1] + (1 if self.color == 'w' else -1)):
@@ -328,7 +409,7 @@ class Pawn(Piece):
         return False
 
     def __add_taking_and_passing_moves(self):
-        for index, move in enumerate(self.taking_moves):
+        for move_index, move in enumerate(self.taking_moves):
             passing_pawn = None
             for piece in Common.all_pieces:
                 if piece.piece_name == ('p' if self.color == 'w' else 'P'):
@@ -337,7 +418,7 @@ class Pawn(Piece):
                         break
             pawn_passing_check = (passing_pawn is not None
                                   and self.en_passant_check(passing_pawn, move))
-            if (move in self.roots_dict.values()
+            if (move in Common.roots_dict.values()
                     and (not self.specific_move_check(move)
                          or pawn_passing_check)
                     and self.piece_color_check(move)):
@@ -347,8 +428,8 @@ class Pawn(Piece):
                     self.passing_pawn_pos = passing_pawn.root_name[1]
 
     def __get_moves(self):
-        self.regular_move = (self.column, self.row - 1) if self.color == 'w' else (self.column, self.row + 1)
-        self.long_move = (self.column, self.row - 2) if self.color == 'w' else (self.column, self.row + 2)
+        self.regular_move_pos = (self.column, self.row - 1) if self.color == 'w' else (self.column, self.row + 1)
+        self.long_move_pos = (self.column, self.row - 2) if self.color == 'w' else (self.column, self.row + 2)
         self.taking_moves = [(self.column + 1, self.row - 1)
                              if self.color == 'w'
                              else (self.column - 1, self.row + 1),

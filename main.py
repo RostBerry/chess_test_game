@@ -2,11 +2,8 @@ import pygame
 
 from chess_game_module import *
 
-
-pg.init()
-
+# pygame and screen init trash is in pieces.py for some reason IDK
 clock = pg.time.Clock()
-screen = pg.display.set_mode(WINDOW_SIZE)
 
 header_img = Image.open(IMG_PATH + PIECE_IMG_PATH + 'w_queen.png').resize((32, 32))
 pg.display.set_icon(pg.image.fromstring(header_img.tobytes(),header_img.size, header_img.mode))
@@ -44,7 +41,7 @@ try:
                 if menu is not None:
                     menu.mouse_motion(event.pos)
                 elif options is not None:
-                    pass
+                    options.mouse_motion(event.pos)
                 elif chess is not None:
                     chess.drag(event.pos)
             if event.type == pg.KEYDOWN:

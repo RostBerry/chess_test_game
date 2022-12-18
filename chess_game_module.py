@@ -1,28 +1,42 @@
 from pieces import *
 import pyperclip as clip
 import board_data
-from konfig import *
 from common import *
 import random
+
+AVAILABLE_IMG = Image.open(IMG_PATH + OTHER_IMG_PATH + 'available.png').resize((ROOT_SIZE, ROOT_SIZE))
+TAKEABLE_IMG = Image.open(IMG_PATH + OTHER_IMG_PATH + 'takeable.png').resize((ROOT_SIZE, ROOT_SIZE))
+MARK_IMG = Image.open(IMG_PATH + OTHER_IMG_PATH + 'mark.png').resize((ROOT_SIZE, ROOT_SIZE))
+
+MOVABLE_IMG_DICT = {'available': AVAILABLE_IMG,
+                    'takeable': TAKEABLE_IMG,
+                    'mark': MARK_IMG}
 
 
 def colorize_buttons(pos):
     for button in Common.all_buttons:
         color = button.second_color
         if button.rect.collidepoint(pos):
-            button.second_color = SELECTED_COLOR
+            button.second_color = Common.SELECTED_COLOR
         else:
-            button.second_color = MAIN_STROKE_COLOR
+            button.second_color = Common.MAIN_STROKE_COLOR
         if button.second_color != color:
             button.update()
+
+
+def get_button_on_click(pos):
+    for button in Common.all_buttons:
+        if button.rect.collidepoint(pos):
+            return button
+    return None
 
 
 class Menu:
     """Main menu class"""
 
-    def __init__(self, screen: pg.Surface):
+    def __init__(self, parent_screen: pg.Surface):
         pg.display.set_caption('Main menu')
-        self.__screen = screen
+        self.__screen = parent_screen
         self.is_game_started = False
         self.is_options_started = False
         self.is_quit = False
@@ -60,10 +74,10 @@ class Menu:
         main_game_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
         main_game_text_stroke = main_game_text_stroke_font.render('CHESS',
                                                                   True,
-                                                                  MAIN_STROKE_COLOR)
+                                                                  Common.MAIN_STROKE_COLOR)
         main_game_text = self.__main_game_text_font.render('CHESS',
                                                            True,
-                                                           MAIN_COLOR)
+                                                           Common.MAIN_COLOR)
         main_text_stroke_pos = (self.__screen.get_width() // 2 -
                                 main_game_text_stroke.get_width() // 2, 0)
 
@@ -72,15 +86,9 @@ class Menu:
         self.__all_content.blit(main_game_text_stroke, main_text_stroke_pos)
         self.__all_content.blit(main_game_text, main_text_pos)
 
-    def __get_button_on_click(self, pos):
-        for button in Common.all_buttons:
-            if button.rect.collidepoint(pos):
-                return button
-        return None
-
     def mouse_btn_down(self, btn, pos):
         if btn == 1:
-            clicked_button = self.__get_button_on_click(pos)
+            clicked_button = get_button_on_click(pos)
             if clicked_button is not None:
                 if clicked_button.button_type == 'PLAY':
                     self.is_game_started = True
@@ -98,17 +106,17 @@ class Menu:
         Common.all_buttons.empty()
 
     def __grand_update(self):
-        self.__screen.fill(BACKGROUND)
+        self.__screen.fill(Common.BACKGROUND)
         self.__screen.blit(self.__all_content, (0, 0))
         Common.all_buttons.draw(self.__screen)
         pg.display.update()
 
 
 class Options(pg.sprite.Sprite):
-    def __init__(self, screen):
+    def __init__(self, parent_screen: pg.Surface):
         super().__init__()
         pg.display.set_caption('Options')
-        self.__screen = screen
+        self.__screen = parent_screen
         self.__main_text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE)
         self.__header_font = pg.font.Font(FONT_TEXT_PATH, FONT_HEADER_SIZE)
         self.__text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
@@ -121,10 +129,10 @@ class Options(pg.sprite.Sprite):
         main_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
         main_text_stroke = main_text_stroke_font.render('OPTIONS',
                                                         True,
-                                                        MAIN_STROKE_COLOR)
+                                                        Common.MAIN_STROKE_COLOR)
         main_text = self.__main_text_font.render('OPTIONS',
                                                  True,
-                                                 MAIN_COLOR)
+                                                 Common.MAIN_COLOR)
         main_text_pos = (self.__screen.get_width() // 2 -
                          main_text.get_width() // 2, 0)
 
@@ -134,34 +142,69 @@ class Options(pg.sprite.Sprite):
         self.__all_content.blit(main_text_stroke, main_text_stroke_pos)
         self.__all_content.blit(main_text, main_text_pos)
 
-    def mouse_btn_down(self, button, pos):
-        pass
+        color_palette_switcher_text = self.__header_font.render('Color scheme:',
+                                                                True,
+                                                                Common.MAIN_STROKE_COLOR)
+        color_palette_switcher_text_pos = (main_text_stroke_pos[0],
+                                           main_text_stroke.get_height())
+        color_palette_switcher_prev = Button('PREV',
+                                             (color_palette_switcher_text_pos[0] +
+                                             color_palette_switcher_text.get_width(),
+                                              color_palette_switcher_text_pos[1]), (35, 35), 14, 2)
+        color_palette_switcher_next = Button('NEXT',
+                                             (color_palette_switcher_text_pos[0] +
+                                              color_palette_switcher_text.get_width() +
+                                              color_palette_switcher_prev.rect.width,
+                                              color_palette_switcher_text_pos[1]), (35, 35), 14, 2)
+
+        Common.all_buttons.add(color_palette_switcher_prev)
+        Common.all_buttons.add(color_palette_switcher_next)
+
+        self.__all_content.blit(color_palette_switcher_text, color_palette_switcher_text_pos)
+
+    def mouse_btn_down(self, mouse_btn, pos):
+        button = get_button_on_click(pos)
+        if button is not None:
+            if button.button_type == 'PREV':
+                print('boba')
+                Common.PALETTE = PALETTES_LIST[PALETTES_LIST.index(Common.PALETTE) - 1]
+                renew_colors()
+        self.__grand_update()
+
+    def mouse_motion(self, pos):
+        colorize_buttons(pos)
+        self.__grand_update()
 
     def __grand_update(self):
-        self.__screen.fill(BACKGROUND)
+        self.__screen.fill(Common.BACKGROUND)
         self.__screen.blit(self.__all_content, (0, 0))
+        Common.all_buttons.draw(self.__screen)
         pg.display.update()
 
 
 class Button(pg.sprite.Sprite):
     def __init__(self, btn_type: str, button_pos: tuple,
-                 size: tuple = MAIN_BTN_SIZE, font_size: int = FONT_MAIN_BUTTONS_SIZE):
+                 size: tuple = MAIN_BTN_SIZE, font_size: int = FONT_MAIN_BUTTONS_SIZE,
+                 stroke_size: int = 3):
         super().__init__()
+        self.stroke_size = stroke_size
         self.image = pg.Surface(size)
-        self.image.fill(MAIN_COLOR)
+        self.image.fill(Common.MAIN_COLOR)
         self.rect = pg.Rect(button_pos, size)
         self.button_type = btn_type
-        self.second_color = MAIN_STROKE_COLOR
+        self.second_color = Common.MAIN_STROKE_COLOR
         self.text_font = pg.font.Font(FONT_TEXT_PATH, font_size)
         self.text = None
         self.update()
 
     def update(self):
-        self.image.fill(MAIN_COLOR)
+        self.image.fill(Common.MAIN_COLOR)
         self.text = self.text_font.render(self.button_type, True, self.second_color)
         self.image.blit(self.text, (self.image.get_width() // 2 - self.text.get_width() // 2,
                                     self.image.get_height() // 2 - self.text.get_height() // 2))
-        pg.draw.rect(self.image, self.second_color, (0, 0, self.rect.width, self.rect.height), 3)
+        pg.draw.rect(self.image, self.second_color,
+                     (0, 0, self.rect.width, self.rect.height),
+                     self.stroke_size)
 
 
 class Chessboard:
@@ -190,7 +233,6 @@ class Chessboard:
         self.__all_marks = pg.sprite.Group()
         self.__all_choices = pg.sprite.Group()
         # Defining interactive objects or variables
-        self.roots_dict = {}
         self.__input_box = None
         self.__flip_button = None
         self.__choice = None
@@ -209,12 +251,13 @@ class Chessboard:
         self.__can_drag = False
         self.__turn = None
         # Dictionaries
-        self.__func_keys = [pg.K_LCTRL, pg.K_RCTRL, pg.K_v, pg.K_RETURN, pg.K_BACKSPACE]
-        self.__hotkey = {pg.K_LCTRL: False, pg.K_RCTRL: False, pg.K_v: False}
+        self.__func_keys = [pg.K_LCTRL, pg.K_RCTRL, pg.K_v, pg.K_RETURN, pg.K_BACKSPACE, pg.K_c]
+        self.__hotkey = {pg.K_LCTRL: False, pg.K_RCTRL: False, pg.K_v: False, pg.K_c: False}
         # Initialization methods
         pg.display.set_caption('Chess Session')
         self.__prepare_screen()
         self.__draw_play_board()
+        self.__draw_all_buttons()
         self.__setup_board_with_fen()
         # self.__prepare_music()
         self.__grand_update()
@@ -237,18 +280,18 @@ class Chessboard:
         # background_img.size,
         # background_img.mode)
         self.__background = pg.Surface(self.__screen.get_size())
-        self.__background.fill(BACKGROUND)
+        self.__background.fill(Common.BACKGROUND)
         self.__screen.blit(self.__background, (0, 0))
 
     def __draw_play_board(self):
         """Draws play board"""
-        total_width = self.__count * self.__size
+        self.total_width = self.__count * self.__size
         # Creating main board objects
-        num_fields = self.__create_num_fields()
+        self.num_fields = self.__create_num_fields()
         Common.all_roots = self.__create_all_roots()
-        num_fields_depth = num_fields[0].get_width()
-        self.__play_board_view = pg.Surface((2 * num_fields_depth + total_width,
-                                             2 * num_fields_depth + total_width), pg.SRCALPHA)
+        self.num_fields_depth = self.num_fields[0].get_width()
+        self.__play_board_view = pg.Surface((2 * self.num_fields_depth + self.total_width,
+                                             2 * self.num_fields_depth + self.total_width), pg.SRCALPHA)
 
         # board_background_img = Image.open(IMG_PATH +
         # STATIC_IMG_PATH +
@@ -257,15 +300,7 @@ class Chessboard:
         # board_background_img = pg.image.fromstring(board_background_img.tobytes(),
         # board_background_img.size,
         # board_background_img.mode)
-        board_background_img = pg.Surface(self.__play_board_view.get_size())
-        board_background_img.fill(BOARD_BACKGROUND_COLOR)
-
-        # Bind created objects to the main object
-        self.__play_board_view.blit(board_background_img, (0, 0))
-        self.__play_board_view.blit(num_fields[0], (0, num_fields_depth))
-        self.__play_board_view.blit(num_fields[0], (num_fields_depth + total_width, num_fields_depth))
-        self.__play_board_view.blit(num_fields[1], (num_fields_depth, 0))
-        self.__play_board_view.blit(num_fields[1], (num_fields_depth, num_fields_depth + total_width))
+        self.__blit_to_play_board()
 
         # Moves the board to the window center
         play_board_rect = self.__play_board_view.get_rect()
@@ -274,18 +309,13 @@ class Chessboard:
         self.__play_board_view_pos = (play_board_rect.x, play_board_rect.y)
         self.__screen.blit(self.__play_board_view, play_board_rect)
         roots_coord_offset = (
-            play_board_rect.x + num_fields_depth,
-            play_board_rect.y + num_fields_depth,)
+            play_board_rect.x + self.num_fields_depth,
+            play_board_rect.y + self.num_fields_depth,)
         self.__apply_offset_for_roots(roots_coord_offset)
-        # Creates the border for the mouse (will be needed later)
-        self.__clipped_area = pg.rect.Rect(roots_coord_offset,
-                                           (total_width,
-                                            total_width))
-        pg.display.update()
 
-        # Draws the input box below the board
         self.__draw_input_box(play_board_rect)
-        self.__draw_all_buttons()
+
+        pg.display.update()
 
     def __draw_input_box(self, board_rect: pg.Rect):
         """Draws input box in the bottom"""
@@ -293,21 +323,50 @@ class Chessboard:
         self.__all_input_boxes.add(self.__input_box)
 
     def __draw_all_buttons(self):
-        self.__flip_button = Button('FLIP', (self.__input_box.rect.x +
-                                             self.__input_box.rect.width,
-                                             self.__input_box.rect.y),
+        self.__copy_button = Button('COPY',
+                                    (self.__input_box.rect.x +
+                                     self.__input_box.rect.width,
+                                     self.__input_box.rect.y),
                                     (self.__input_box.rect.height,
-                                     self.__input_box.rect.height), 16)
+                                     self.__input_box.rect.height), 14, 2)
+        self.__flip_button = Button('FLIP',
+                                    (self.__input_box.rect.x +
+                                     self.__input_box.rect.width + self.__input_box.rect.height,
+                                     self.__input_box.rect.y),
+                                    (self.__input_box.rect.height,
+                                     self.__input_box.rect.height), 14, 2)
+        Common.all_buttons.add(self.__copy_button)
         Common.all_buttons.add(self.__flip_button)
+
+    def __blit_to_play_board(self):
+        self.__play_board_view.fill(Common.BOARD_BACKGROUND_COLOR)
+        self.__play_board_view.blit(self.num_fields[0],
+                                    (0, self.num_fields_depth))
+        self.__play_board_view.blit(self.num_fields[0],
+                                    (self.num_fields_depth + self.total_width, self.num_fields_depth))
+        self.__play_board_view.blit(self.num_fields[1],
+                                    (self.num_fields_depth, 0))
+        self.__play_board_view.blit(self.num_fields[1],
+                                    (self.num_fields_depth, self.num_fields_depth + self.total_width))
 
     def __create_num_fields(self):
         """Creates the rows and lines near the board (like 1-8, a-g)"""
-        lines = pg.Surface((self.__count * self.__size, self.__size // 2), pg.SRCALPHA).convert_alpha()
-        rows = pg.Surface((self.__size // 2, self.__count * self.__size), pg.SRCALPHA).convert_alpha()
+        lines = pg.Surface((self.__count * self.__size, self.__size // 2)).convert_alpha()
+        rows = pg.Surface((self.__size // 2, self.__count * self.__size)).convert_alpha()
+        lines.fill((0, 0, 0, 0))
+        rows.fill((0, 0, 0, 0))
         # Numerates the lines and rows
-        for i in range(0, self.__count):
-            letter = self.__chessboard_font.render(letters[i].upper(), True, LETTERS_COLOR)
-            number = self.__chessboard_font.render(str(self.__count - i), True, NUMBERS_COLOR)
+        # iteration = (0, self.__count) if not Common.is_flipped else (self.__count, 0)
+        for i in range(self.__count):
+            letter = self.__chessboard_font.render(letters[i if not Common.is_flipped
+                                                           else self.__count - i - 1].upper(),
+                                                   True,
+                                                   Common.BOARD_TEXT_COLOR)
+            number = self.__chessboard_font.render(str((self.__count - i)
+                                                       if not Common.is_flipped
+                                                       else i + 1),
+                                                   True,
+                                                   Common.BOARD_TEXT_COLOR)
             # Puts a letter to the line
             lines.blit(letter, (
                 i * self.__size + (self.__size - letter.get_rect().width) // 2,
@@ -318,9 +377,7 @@ class Chessboard:
                 (rows.get_width() - number.get_rect().width) // 2,
                 i * self.__size + (self.__size - number.get_rect().height) // 2
             ))
-            pg.display.update()
-
-        return rows, lines
+        return [rows, lines]
 
     def __create_all_roots(self):
         """Draws all roots on the board"""
@@ -329,10 +386,11 @@ class Chessboard:
         is_even_count = (self.__count % 2 == 0)
         root_color_order = False if is_even_count else True
         # Creates the roots and adds them to the sprite group
-        for y in range(self.__count):
-            for x in range(self.__count):
+        iteration = (0, self.__count) if not Common.is_flipped else (self.__count, 0)
+        for y in range(iteration[0], iteration[1]):
+            for x in range(iteration[0], iteration[1]):
                 root_name = self.__to_root_name((y, x))
-                self.roots_dict[root_name[0]] = root_name[1]
+                Common.roots_dict[root_name[0]] = root_name[1]
                 root = Root(root_color_order,
                             self.__size,
                             (x, y),
@@ -363,9 +421,8 @@ class Chessboard:
         for piece in Common.all_pieces:
             for root in Common.all_roots:
                 # Places the piece on the root
-                if piece.root_name[0] == root.root_name[0]:
+                if piece.root_name[1] == root.root_name[1]:
                     piece.rect = root.rect.copy()
-                    root.kept = True
 
     def __setup_board_with_fen(self):
         """Decodes the Forsyth Edwards Notation and setups new board konfig"""
@@ -436,7 +493,7 @@ class Chessboard:
         root_name = self.__to_root_name(board_data_coord)
         piece_tuple = self.__pieces[piece_sym]
         class_name = globals()[piece_tuple[0]]
-        return class_name(piece_tuple[1], root_name, self.roots_dict)
+        return class_name(piece_tuple[1], root_name)
 
     def __to_root_name(self, board_data_coord: tuple):
         """Returns the name of the root"""
@@ -487,7 +544,7 @@ class Chessboard:
     def __get_piece_on_click(self, root):
         """Returns the clicked piece"""
         for piece in Common.all_pieces:
-            if piece.root_name[0] == root.root_name[0]:
+            if piece.root_name[1] == root.root_name[1]:
                 if piece.color == self.__turn and self.__selected_piece is None:
                     if self.__taken_piece is None:
                         return piece
@@ -532,12 +589,18 @@ class Chessboard:
                 self.__choosing_cell = self.__get_choosing_cell_on_click(pos)
                 if self.__choosing_cell is not None:
                     self.__chosen_new_piece = self.__get_new_piece(self.__choosing_cell)
-            elif self.__flip_button is not None:
-                self.__flip()
+
             else:
                 self.__pressed_root = (self.__get_root(pos)
                                        if self.__selected_piece is None
                                        else self.__pressed_root)
+
+            button = get_button_on_click(pos)
+            if button is not None:
+                if button.button_type == 'FLIP':
+                    self.__flip()
+                elif button.button_type == 'COPY':
+                    self.__copy_to_buffer()
         self.__pressed_input_box = self.__get_input_box(pos)
         # User clicked on the input box
         if self.__pressed_input_box is not None:
@@ -599,6 +662,16 @@ class Chessboard:
         self.__clicked = False
         self.__grand_update()
 
+    def __copy_to_buffer(self):
+        clip.copy(self.__input_box.text)
+
+    def __check_copy(self):
+        if (self.__hotkey[pg.K_LCTRL] or self.__hotkey[pg.K_RCTRL]) and self.__hotkey[pg.K_c]:
+            self.__copy_to_buffer()
+            return True
+        else:
+            return False
+
     def __check_paste(self):
         """Checks if the user's keyboard input is Ctrl+V"""
         if (self.__hotkey[pg.K_LCTRL] or self.__hotkey[pg.K_RCTRL]) and self.__hotkey[pg.K_v]:
@@ -612,16 +685,26 @@ class Chessboard:
         if self.__input_box.active and event.key in self.__func_keys:
             if event.key == pg.K_LCTRL:  # Left Ctrl
                 self.__hotkey[pg.K_LCTRL] = True
+
             if event.key == pg.K_RCTRL:  # Right Ctrl
                 self.__hotkey[pg.K_RCTRL] = True
+
             if event.key == pg.K_v:  # v
                 self.__hotkey[pg.K_v] = True
                 if not self.__check_paste():
                     self.__input_box.put_char(event.unicode)
+
             if event.key == pg.K_RETURN:  # Enter
                 self.__setup_board_with_fen()
+
             if event.key == pg.K_BACKSPACE:  # Backspace
                 self.__input_box.del_char()
+
+            if event.key == pg.K_c:
+                self.__hotkey[pg.K_c] = True
+                if not self.__check_copy():
+                    self.__input_box.put_char(event.unicode)
+
         elif self.__input_box.active:  # Works if user didn't press any functional key
             self.__input_box.put_char(event.unicode)
         self.__grand_update()
@@ -637,10 +720,21 @@ class Chessboard:
             self.__hotkey[pg.K_v] = False
 
     def __flip(self):
-        print(Common.pieces_map)
-        Common.pieces_map = Common.pieces_map[::-1]
-        print(Common.pieces_map)
-        self.__setup_board_with_fen()
+        self.__unmark_all_marks()
+        self.__taken_piece = None
+        self.__selected_piece = None
+        Common.is_flipped ^= True
+        for root in Common.all_roots:
+            root_name_tuple = (self.__count - root.root_name[1][0],
+                               self.__count - root.root_name[1][1])
+            root.root_name = self.__to_root_name(root_name_tuple[::-1])
+            Common.roots_dict[root.root_name[0]] = root.root_name[1]
+        for piece in Common.all_pieces:
+            for root in Common.all_roots:
+                if piece.root_name[0] == root.root_name[0]:
+                    piece.rect = root.rect.copy()
+        self.num_fields = self.__create_num_fields()
+        self.__blit_to_play_board()
 
     def __mark_root(self, root):
         """Draws a green circle on the clicked root"""
@@ -661,7 +755,6 @@ class Chessboard:
 
     def __draw_available_roots(self, piece: Piece):
         piece.check_movables(True)
-        # print('mov', piece.movable_roots, 'tak', piece.takeable_roots)
         for available in piece.movable_roots:
             moving_dist = (available[0], available[1])
             for root in Common.all_roots:
@@ -714,7 +807,6 @@ class Chessboard:
                                                            new_piece_coords[1][0]))
         piece.move_to_root(pawn)
         self.kill_piece(pawn)
-        print('name', pawn.root_name)
         self.__check_check(piece)
         return piece
 
@@ -735,8 +827,6 @@ class Chessboard:
     def __after_move_preps(self, piece, root):
         self.__play_move_sound()
         self.__unmark_all_marks()
-        self.__pressed_root.kept = False
-        root.kept = True
         Common.other_map[2] = '-'
 
         if piece.piece_name in ['p', 'P']:
@@ -839,7 +929,6 @@ class Chessboard:
         if no_moves:
             for prob_king in Common.all_pieces:
                 if prob_king.piece_name == ('k' if color == 'w' else 'K'):
-                    print(f'Color {prob_king.color}: {prob_king.is_checked}')
                     if prob_king.is_checked:
                         print('Mate')
                     else:
@@ -883,25 +972,27 @@ class InputBox(pg.sprite.Sprite):
         super().__init__()
         x, y = board_rect.x, board_rect.y
         width, height = board_rect.width, board_rect.height
-        self.input_box_font_size = FONT_INPUT_BOX_SIZE
-        self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_size)
+        buttons_count = 2
+        width -= INPUT_BOX_HEIGHT * buttons_count
+        self.input_box_font_height = FONT_INPUT_BOX_SIZE
+        self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_height)
         self.text = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
         self.__fen_text = None
         self.active = False
-        self.image = pg.Surface((width, INPUT_BOX_SIZE)).convert_alpha()
+        self.image = pg.Surface((width, INPUT_BOX_HEIGHT)).convert_alpha()
         self.image.fill(BLACK)
-        self.rect = pg.Rect(x, 2 * y + height, width, INPUT_BOX_SIZE)
+        self.rect = pg.Rect(x, 2 * y + height, width, INPUT_BOX_HEIGHT)
         self.__update_text()
 
     def activate(self):
         """Activates the input box"""
         self.active = True
-        pg.draw.rect(self.image, MAIN_STROKE_COLOR, (0, 0, self.rect.width, self.rect.height), 2)
+        pg.draw.rect(self.image, Common.MAIN_STROKE_COLOR, (0, 0, self.rect.width, self.rect.height), 2)
 
     def deactivate(self):
         """Deactivates the input box"""
         self.active = False
-        pg.draw.rect(self.image, MAIN_COLOR, (0, 0, self.rect.width, self.rect.height), 2)
+        pg.draw.rect(self.image, Common.MAIN_COLOR, (0, 0, self.rect.width, self.rect.height), 2)
 
     def put_char(self, char: str):
         """Adds the symbol to the input box"""
@@ -915,20 +1006,24 @@ class InputBox(pg.sprite.Sprite):
 
     def __update_text(self):
         """Updates the input box if any changes have been made"""
-        self.image.fill(MAIN_COLOR)
+        self.image.fill(Common.MAIN_COLOR)
         pg.draw.rect(self.image,
-                     MAIN_STROKE_COLOR if self.active else MAIN_COLOR,
+                     Common.MAIN_STROKE_COLOR if self.active else Common.MAIN_COLOR,
                      (0, 0, self.rect.width, self.rect.height), 2)
-        self.__fen_text = self.input_box_font.render(self.text, True, BLACK)
+        self.__fen_text = self.input_box_font.render(self.text, True, Common.MAIN_STROKE_COLOR)
         self.__adapt_text()
         self.image.blit(self.__fen_text, (9, 9))
 
     def __adapt_text(self):
-        if (self.__fen_text.get_rect().width + 14 > self.rect.width or
-                self.__fen_text.get_rect().height + 14 > self.rect.height):
-            self.input_box_font_size -= 1
-            self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_size)
-            self.__fen_text = self.input_box_font.render(self.text, True, BLACK)
+        done = False
+        while not done:
+            if (self.__fen_text.get_rect().width + 14 > self.rect.width or
+                    self.__fen_text.get_rect().height + 14 > self.rect.height):
+                self.input_box_font_height -= 1
+                self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_height)
+                self.__fen_text = self.input_box_font.render(self.text, True, Common.MAIN_STROKE_COLOR)
+            else:
+                done = True
 
 
 class Root(pg.sprite.Sprite):
@@ -937,7 +1032,7 @@ class Root(pg.sprite.Sprite):
     def __init__(self, color_order: int, size: int, coordinates: tuple, name: str):
         super().__init__()
         x, y = coordinates
-        self.color = ROOT_COLORS[color_order]
+        self.color = Common.ROOT_COLORS[color_order]
         self.root_name = name
         # image = Image.open(IMG_PATH + self.color).resize((size, size))
         # self.image = pg.image.fromstring(image.tobytes(), image.size, image.mode)
@@ -946,7 +1041,6 @@ class Root(pg.sprite.Sprite):
         self.rect = pg.Rect(x * size, y * size, size, size)
         self.mark = False
         self.is_selected = False
-        self.kept = False
 
 
 class Mark(pg.sprite.Sprite):
@@ -954,7 +1048,7 @@ class Mark(pg.sprite.Sprite):
 
     def __init__(self, root: Root, mark_type):
         super().__init__()
-        picture = Image.open(IMG_PATH + OTHER_IMG_PATH + mark_type + '.png').resize((ROOT_SIZE, ROOT_SIZE))
+        picture = MOVABLE_IMG_DICT[mark_type]
         self.image = (pg.image.fromstring(picture.tobytes(), picture.size, picture.mode).convert_alpha())
         if mark_type in ['available', 'takeable']:
             self.image.set_alpha(120)
@@ -994,12 +1088,7 @@ class ChoosingPiece(pg.sprite.Sprite):
         self.names_dict = {1: 'queen', 2: 'rook', 3: 'knight', 4: 'bishop'}
         self.piece_names_dict = {1: ('q', 'Q'), 2: ('r', 'R'), 3: ('n', 'N'), 4: ('b', 'B')}
         self.piece_name = self.piece_names_dict[counter][0 if pawn.color == 'b' else 1]
-        image = Image.open(IMG_PATH +
-                           PIECE_IMG_PATH +
-                           pawn.color + '_' +
-                           self.names_dict[counter] +
-                           '.png').resize((ROOT_SIZE, ROOT_SIZE))
-        self.image = pg.image.fromstring(image.tobytes(), image.size, image.mode)
+        self.image = PIECES_IMG_DICT[pawn.color + '_' + self.names_dict[self.counter]]
 
 
 class ChoosingCell(pg.sprite.Sprite):
@@ -1010,8 +1099,11 @@ class ChoosingCell(pg.sprite.Sprite):
         self.counter = counter
         self.image = pg.Surface((ROOT_SIZE, ROOT_SIZE))
         self.image.fill(WHITE)
+        offset_dist = ((ROOT_SIZE if pawn.color == 'w' else -ROOT_SIZE)
+                       if not Common.is_flipped else
+                       (-ROOT_SIZE if pawn.color == 'w' else ROOT_SIZE))
         self.rect = pg.Rect((pawn.rect.x,
-                             pawn.rect.y + (ROOT_SIZE if pawn.color == 'w' else -ROOT_SIZE) * counter),
+                             pawn.rect.y + offset_dist * counter),
                             (ROOT_SIZE, ROOT_SIZE))
         choosing = ChoosingPiece(counter, pawn)
         choosing.rect = self.rect

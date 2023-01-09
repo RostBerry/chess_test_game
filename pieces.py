@@ -1,5 +1,8 @@
 from common import *
 from PIL import Image
+from stockfish import Stockfish, StockfishException
+
+stockfish = Stockfish('assets/stockfish/stockfish-windows-2022-x86-64-avx2.exe')
 
 pg.init()
 screen = pg.display.set_mode(WINDOW_SIZE)
@@ -247,6 +250,7 @@ class Piece(pg.sprite.Sprite):
             for piece in Common.all_pieces:
                 if piece.color == ('w' if self.color == 'b' else 'b'):
                     piece.check_movables(False)
+                    #print(f'movables {piece.movable_roots}\t takeables {piece.takeable_roots}\t name {piece.piece_name}')
                     for prob_king in Common.all_pieces:
                         if prob_king.piece_name == ('k' if self.color == 'b' else 'K'):
                             if prob_king.root_name[1] in piece.takeable_roots:

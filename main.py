@@ -1,16 +1,14 @@
-import pygame
-
 from chess_game_module import *
 
-# pygame and screen init trash is in pieces.py for some reason IDK
+# pygame, Stockfish and screen init trash is in pieces.py for some reason IDK
 clock = pg.time.Clock()
 
 header_img = Image.open(IMG_PATH + PIECE_IMG_PATH + 'w_queen.png').resize((32, 32))
 pg.display.set_icon(pg.image.fromstring(header_img.tobytes(),header_img.size, header_img.mode))
 
-pg.mixer.music.load(MUSIC_PATH + BACKGROUND_MUSIC)
-pg.mixer.music.set_volume(0.3)
-pg.mixer.music.play(-1)
+with open('saved_info.json', 'r') as info:
+    Common.PALETTE = json.load(info)['color scheme']
+renew_colors()
 
 chess = None
 options = None
@@ -68,6 +66,14 @@ try:
                     menu = None
                 elif menu.is_quit:
                     run = False
+            elif options is not None:
+                if options.back:
+                    menu = Menu(screen)
+                    options = None
+            elif chess is not None:
+                if chess.back:
+                    menu = Menu(screen)
+                    chess = None
         clock.tick(FPS)
 except KeyboardInterrupt:
     pass

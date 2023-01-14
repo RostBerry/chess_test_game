@@ -2,10 +2,13 @@ from common import *
 from PIL import Image
 from stockfish import Stockfish, StockfishException
 
-stockfish = Stockfish('assets/stockfish/stockfish-windows-2022-x86-64-avx2.exe')
-
 pg.init()
 screen = pg.display.set_mode(WINDOW_SIZE)
+pg.display.set_caption('Loading')
+header_img = Image.open(IMG_PATH + PIECE_IMG_PATH + 'w_queen.png').resize((32, 32))
+pg.display.set_icon(pg.image.fromstring(header_img.tobytes(),header_img.size, header_img.mode))
+
+stockfish = Stockfish('assets/stockfish/stockfish-windows-2022-x86-64-avx2.exe')
 
 # Pictures declaration
 B_KING_IMG = pg.image.fromstring((image := Image.open(IMG_PATH +
@@ -103,6 +106,7 @@ class Piece(pg.sprite.Sprite):
         self.column = self.root_name[1][0]
         self.is_moved = False
         self.first_move = True
+        self.recursion_depth = False
         self.movable_roots_r = [(-1, 0), (1, 0),  # Left/Right
                                 (0, 1), (0, -1)]  # Up/Down
         self.movable_roots_b = [(-1, -1), (1, -1),  # Up
@@ -231,14 +235,14 @@ class Piece(pg.sprite.Sprite):
         return True
 
     def remove_duplicates_in_movables(self):
-        pass
-        # self.movable_roots = list(dict.fromkeys(self.movable_roots))
-        # self.takeable_roots = list(dict.fromkeys(self.takeable_roots))
+        self.movable_roots = list(dict.fromkeys(self.movable_roots))
+        self.takeable_roots = list(dict.fromkeys(self.takeable_roots))
         # self.all_possible_roots = list(dict.fromkeys(self.all_possible_roots))
         # self.all_possible_takeable_roots = list(dict.fromkeys(self.all_possible_takeable_roots))
         # print(f'{self.piece_name}({self.root_name[1]}): \n\tmovables: {self.movable_roots} \n\ttakeables: {self.takeable_roots}')
 
     def remove_future_checked_movables(self):
+        self.recursion_depth ^= True
         old_position = self.root_name
         new_movables, new_takeables = self.movable_roots, self.takeable_roots
         new_all_pieces = Common.all_pieces.copy()
@@ -261,6 +265,7 @@ class Piece(pg.sprite.Sprite):
         Common.all_pieces = new_all_pieces
         self.root_name = old_position
         self.movable_roots = new_movables
+        self.takeable_roots = new_takeables
 
 
 # noinspection PyTypeChecker
@@ -303,11 +308,13 @@ class King(Piece):
 
         self.remove_duplicates_in_movables()
         if do_check_checking:
+            self.recursion_depth = True
             self.remove_future_checked_movables()
 
         self.check_castling((self.column - 1, self.row), (self.column - 2, self.row))
         self.check_castling((self.column + 1, self.row), (self.column + 2, self.row))
         if do_check_checking:
+            self.recursion_depth = False
             self.remove_future_checked_movables()
 
 
@@ -322,6 +329,7 @@ class Queen(Piece):
         self.movable_checking_loop_with_continuing(self.movable_roots_b + self.movable_roots_r)
         self.remove_duplicates_in_movables()
         if do_check_checking:
+            self.recursion_depth = False
             self.remove_future_checked_movables()
 
 
@@ -337,6 +345,7 @@ class Rook(Piece):
         self.movable_checking_loop_with_continuing(self.movable_roots_r)
         self.remove_duplicates_in_movables()
         if do_check_checking:
+            self.recursion_depth = False
             self.remove_future_checked_movables()
 
 
@@ -351,6 +360,7 @@ class Bishop(Piece):
         self.movable_checking_loop_with_continuing(self.movable_roots_b)
         self.remove_duplicates_in_movables()
         if do_check_checking:
+            self.recursion_depth = False
             self.remove_future_checked_movables()
 
 
@@ -367,6 +377,7 @@ class Knight(Piece):
         self.movables_checking_loop(self.movable_roots_n)
         self.remove_duplicates_in_movables()
         if do_check_checking:
+            self.recursion_depth = False
             self.remove_future_checked_movables()
 
 
@@ -454,4 +465,5 @@ class Pawn(Piece):
 
         self.remove_duplicates_in_movables()
         if do_check_checking:
+            self.recursion_depth = False
             self.remove_future_checked_movables()

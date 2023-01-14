@@ -3,9 +3,6 @@ from chess_game_module import *
 # pygame, Stockfish and screen init trash is in pieces.py for some reason IDK
 clock = pg.time.Clock()
 
-header_img = Image.open(IMG_PATH + PIECE_IMG_PATH + 'w_queen.png').resize((32, 32))
-pg.display.set_icon(pg.image.fromstring(header_img.tobytes(),header_img.size, header_img.mode))
-
 with open('saved_info.json', 'r') as info:
     Common.PALETTE = json.load(info)['color scheme']
 renew_colors()

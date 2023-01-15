@@ -18,6 +18,7 @@ try:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 run = False
+
             if event.type == pg.MOUSEBUTTONDOWN:
                 if menu is not None:
                     menu.mouse_btn_down(event.button, event.pos)
@@ -25,6 +26,9 @@ try:
                     options.mouse_btn_down(event.button, event.pos)
                 elif chess is not None:
                     chess.mouse_btn_down(event.button, event.pos)
+                elif game_mode is not None:
+                    game_mode.mouse_btn_down(event.button, event.pos)
+
             if event.type == pg.MOUSEBUTTONUP:
                 if menu is not None:
                     pass
@@ -32,6 +36,9 @@ try:
                     pass
                 elif chess is not None:
                     chess.mouse_btn_up(event.button, event.pos)
+                elif game_mode is not None:
+                    pass
+
             if event.type == pg.MOUSEMOTION:
                 if menu is not None:
                     menu.mouse_motion(event.pos)
@@ -39,38 +46,53 @@ try:
                     options.mouse_motion(event.pos)
                 elif chess is not None:
                     chess.drag(event.pos)
+                elif game_mode is not None:
+                    game_mode.mouse_motion(event.pos)
+
             if event.type == pg.KEYDOWN:
                 if menu is not None:
                     pass
                 elif options is not None:
-                    pass
+                    options.keyboard_btn_down(event)
                 elif chess is not None:
                     chess.keyboard_btn_down(event)
+
             if event.type == pg.KEYUP:
-                if menu is not None:
-                    pass
-                elif options is not None:
-                    pass
-                elif chess is not None:
-                    chess.keyboard_btn_up(event)
+                keyboard_btn_up(event)
 
             if menu is not None:
+
                 if menu.is_game_started:
-                    chess = Chessboard(screen)
+                    game_mode = GameModeChanger(screen)
                     menu = None
+
                 elif menu.is_options_started:
                     options = Options(screen)
                     menu = None
+
                 elif menu.is_quit:
                     run = False
+
             elif options is not None:
+
                 if options.back:
                     menu = Menu(screen)
                     options = None
+
             elif chess is not None:
+
                 if chess.back:
                     menu = Menu(screen)
                     chess = None
+
+            elif game_mode is not None:
+
+                if game_mode.back:
+                    menu = Menu(screen)
+                    game_mode = None
+                elif game_mode.is_started:
+                    game_mode = None
+                    chess = Chessboard(screen)
         clock.tick(FPS)
 except KeyboardInterrupt:
     pass

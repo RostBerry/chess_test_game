@@ -1,6 +1,7 @@
 from common import *
 from PIL import Image
 from stockfish import Stockfish, StockfishException
+import time
 
 pg.init()
 screen = pg.display.set_mode(WINDOW_SIZE)
@@ -116,7 +117,6 @@ class Piece(pg.sprite.Sprite):
         self.takeable_roots = []
         self.all_possible_takeable_roots = []
         self.prob_check_roots = []
-        self.all_roots = Common.all_roots
         self.piece_color_break_check = False
         self.roots_dict_keys = list(Common.roots_dict.keys())
         self.roots_dict_values = list(Common.roots_dict.values())
@@ -207,7 +207,7 @@ class Piece(pg.sprite.Sprite):
         pass
 
     def piece_color_check(self, offset):
-        for piece in Common.all_pieces:  # piece_pos looks like ((a1, (1, 1)), w)
+        for piece in Common.all_pieces:
             if piece.root_name[1] == offset:
                 if piece.color != self.color:
                     self.piece_color_break_check = True
@@ -216,7 +216,7 @@ class Piece(pg.sprite.Sprite):
         return True
 
     def piece_check_through_one(self, offset):
-        for piece in Common.all_pieces:  # piece_pos looks like ((a1, (1, 1)), w)
+        for piece in Common.all_pieces:
             if piece.root_name[1] == offset:
                 self.piece_color_break_check = True
 
@@ -248,24 +248,55 @@ class Piece(pg.sprite.Sprite):
         new_all_pieces = Common.all_pieces.copy()
         for movable in self.movable_roots + self.takeable_roots:
             self.root_name = (self.root_name[0], movable)
+            # for root in Common.all_roots:
+            #     if root.root_name[1] == self.root_name[1]:
+            #         needed_root = root
+            #         break
+            # self.move_to_root(needed_root)
+            # Common.all_roots.draw(screen)
+            # Common.all_pieces.draw(screen)
+            # pg.display.update()
+            # print(self.piece_name, self.root_name)
+            # time.sleep(0.2)
             for piece in new_all_pieces:
-                if piece.root_name[1] == self.root_name[1] and piece.piece_name != self.piece_name:
+                if piece.root_name[1] == self.root_name[1] and piece is not self:
                     Common.all_pieces.remove(piece)
             for piece in Common.all_pieces:
                 if piece.color == ('w' if self.color == 'b' else 'b'):
                     piece.check_movables(False)
                     #print(f'movables {piece.movable_roots}\t takeables {piece.takeable_roots}\t name {piece.piece_name}')
                     for prob_king in Common.all_pieces:
+                        found_to_take = False
+                        isKingFound = False
                         if prob_king.piece_name == ('k' if self.color == 'b' else 'K'):
+                            isKingFound = True
+                            #print(prob_king.root_name[1] in piece.takeable_roots, piece.takeable_roots)
                             if prob_king.root_name[1] in piece.takeable_roots:
+                                king_pos = prob_king.root_name
+                                found_to_take = True
+                            if found_to_take or not isKingFound:
+                                #print(f'{piece.piece_name} ({piece.root_name}): {new_movables}, {new_takeables}, {movable}')
                                 if movable in new_movables:
                                     new_movables.remove(movable)
                                 elif movable in new_takeables:
                                     new_takeables.remove(movable)
-        Common.all_pieces = new_all_pieces
-        self.root_name = old_position
-        self.movable_roots = new_movables
-        self.takeable_roots = new_takeables
+                                else:
+                                    pass
+                                    #print('abobo')
+            Common.all_pieces = new_all_pieces.copy()
+            self.root_name = old_position
+            self.movable_roots = new_movables
+            self.takeable_roots = new_takeables
+            # print(old_position)
+            # for root in Common.all_roots:
+            #     if root.root_name[1] == self.root_name[1]:
+            #         needed_root = root
+            #         break
+            # self.move_to_root(needed_root)
+            # Common.all_roots.draw(screen)
+            # Common.all_pieces.draw(screen)
+            # pg.display.update()
+            # print(self.piece_name, self.root_name)
 
 
 # noinspection PyTypeChecker

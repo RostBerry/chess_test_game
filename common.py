@@ -8,10 +8,12 @@ class Common:
     all_pieces = pg.sprite.Group()
     all_roots = pg.sprite.Group()
     all_marks = pg.sprite.Group()
+    all_input_boxes = pg.sprite.Group()
     all_choosing_pieces = pg.sprite.Group()
     all_choosing_cells = pg.sprite.Group()
     all_buttons = pg.sprite.Group()
     roots_dict = {}
+    hotkeys = {pg.K_LCTRL: False, pg.K_RCTRL: False, pg.K_v: False, pg.K_c: False}
     pieces_map = []
     other_map = []
     pieces_positions = ()

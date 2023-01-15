@@ -1,7 +1,6 @@
 import json
 from pieces import *
 import pyperclip as clip
-import board_data
 from common import *
 import random
 
@@ -30,6 +29,8 @@ pg.mixer.music.load(MUSIC_PATH + BACKGROUND_MUSIC)
 pg.mixer.music.set_volume(0.3)
 pg.mixer.music.play(-1)
 
+func_keys = [pg.K_LCTRL, pg.K_RCTRL, pg.K_v, pg.K_RETURN, pg.K_BACKSPACE, pg.K_c]
+
 def colorize_buttons(pos):
     for button in Common.all_buttons:
         color = button.second_color
@@ -47,9 +48,41 @@ def get_button_on_click(pos):
             return button
     return None
 
+
 def create_back_button(end_x: int, y):
     return Button('BACK', (end_x // 2 - BACK_BTN_SIZE[0] // 2,
                     y), BACK_BTN_SIZE, 24, 3)
+
+
+def check_copy(input_box):
+    if (Common.hotkeys[pg.K_LCTRL] or Common.hotkeys[pg.K_RCTRL]) and Common.hotkeys[pg.K_c]:
+        copy_to_buffer(input_box)
+        return True
+    else:
+        return False
+
+
+def check_paste():
+    """Checks if the user's keyboard input is Ctrl+V"""
+    if (Common.hotkeys[pg.K_LCTRL] or Common.hotkeys[pg.K_RCTRL]) and Common.hotkeys[pg.K_v]:
+        return True
+    else:
+        return False
+
+
+def copy_to_buffer(input_box):
+    clip.copy(input_box.text)
+
+
+def keyboard_btn_up(event):
+    """Works when the keyboard btn is released"""
+    # Releasing all keys
+    if event.key == pg.K_LCTRL:
+        Common.hotkeys[pg.K_LCTRL] = False
+    if event.key == pg.K_RCTRL:
+        Common.hotkeys[pg.K_RCTRL] = False
+    if event.key == pg.K_v:
+        Common.hotkeys[pg.K_v] = False
 
 
 class Menu:
@@ -74,6 +107,7 @@ class Menu:
 
     def __prepare_screen(self):
         Common.all_buttons.empty()
+        Common.all_input_boxes.empty()
         self.__draw_main_text()
         self.__draw_buttons()
 
@@ -157,6 +191,7 @@ class Options:
     def __prepare_screen(self):
         self.all_content.fill((0, 0, 0, 0))
         Common.all_buttons.empty()
+        Common.all_input_boxes.empty()
         main_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
         main_text_stroke = main_text_stroke_font.render('OPTIONS',
                                                         True,
@@ -200,13 +235,41 @@ class Options:
         Common.all_buttons.add(color_palette_switcher_prev)
         Common.all_buttons.add(color_palette_switcher_next)
 
+        content_list_pos = color_palette_switcher_text_pos[1] + color_palette_switcher_text.get_height() + 20
+
+        username_asking_text = self.__header_font.render('Your Username: ', True,
+                                                         Common.MAIN_STROKE_COLOR)
+        self.all_content.blit(username_asking_text,
+                              (main_text_stroke_pos[0], content_list_pos - 5))
+        with open('saved_info.json') as info:
+            username = json.load(info)['username']
+        self.__username_input_box = InputBox(0,
+                                      main_text_stroke_pos[0] + username_asking_text.get_width(),
+                                      content_list_pos, username_asking_text.get_width(),
+                                      username_asking_text.get_height(), 0, username,
+                                      FONT_HEADER_SIZE, 'custom')
+        if self.__username_input_box.text == '':
+            self.__username_input_box.put_char('Anonymous')
+        Common.all_input_boxes.add(self.__username_input_box)
+        content_list_pos += username_asking_text.get_height()
+
         back_button = create_back_button(main_text_stroke_pos[0],
                                          color_palette_switcher_text_pos[1] - BACK_BTN_SIZE[1])
         Common.all_buttons.add(back_button)
 
+    def mouse_motion(self, pos):
+        colorize_buttons(pos)
+        self.__grand_update()
+
     def mouse_btn_down(self, mouse_btn, pos):
         button = get_button_on_click(pos)
-        if button is not None:
+        self.__username_input_box.deactivate()
+        if self.__username_input_box.text == '':
+            self.__username_input_box.put_char('Anonymous')
+        if self.__username_input_box.rect.collidepoint(pos):
+            if mouse_btn == 1:
+                self.__username_input_box.activate()
+        elif button is not None:
             if mouse_btn == 1:
                 if button.button_type in ['PREV', 'NEXT']:
                     palette_index = list(PALETTES_LIST).index(Common.PALETTE)
@@ -224,21 +287,120 @@ class Options:
                     with open('saved_info.json', 'w') as info:
                         json.dump(saved_info, info)
                 elif button.button_type == 'BACK':
+                    with open('saved_info.json', 'r') as info:
+                        all_info = json.load(info)
+                    all_info['username'] = self.__username_input_box.text
+                    with open('saved_info.json', 'w') as info:
+                        json.dump(all_info, info)
                     self.back = True
         self.__grand_update()
 
-    def mouse_motion(self, pos):
-        colorize_buttons(pos)
+    def keyboard_btn_down(self, event):
+        """Works when the keyboard btn is clicked"""
+        if self.__username_input_box.active and event.key in func_keys:
+            if event.key == pg.K_LCTRL:  # Left Ctrl
+                Common.hotkeys[pg.K_LCTRL] = True
+
+            if event.key == pg.K_RCTRL:  # Right Ctrl
+                Common.hotkeys[pg.K_RCTRL] = True
+
+            if event.key == pg.K_v:  # v
+                Common.hotkeys[pg.K_v] = True
+                if not check_paste():
+                    self.__username_input_box.put_char(event.unicode)
+                else:
+                    self.__username_input_box.put_char(clip.paste())
+
+            if event.key == pg.K_BACKSPACE:  # Backspace
+                self.__username_input_box.del_char()
+
+            if event.key == pg.K_c:
+                Common.hotkeys[pg.K_c] = True
+                if not check_copy(self.__username_input_box):
+                    self.__username_input_box.put_char(event.unicode)
+
+        elif self.__username_input_box.active:  # Works if user didn't press any functional key
+            self.__username_input_box.put_char(event.unicode)
+
+        with open('saved_info.json', 'r') as info:
+            all_info = json.load(info)
+        all_info['username'] = self.__username_input_box.text
+        with open('saved_info.json', 'w') as info:
+            json.dump(all_info, info)
         self.__grand_update()
 
     def __grand_update(self):
         self.__screen.fill(Common.BACKGROUND)
         self.__screen.blit(self.all_content, (0, 0))
         Common.all_buttons.draw(self.__screen)
+        Common.all_input_boxes.draw(self.__screen)
         pg.display.update()
 
 
-class GameModeChanger: pass
+class GameModeChanger:
+    def __init__(self, parent_screen: pg.Surface):
+        pg.display.set_caption('Game Mode')
+        self.__screen = parent_screen
+        self.__main_text_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE)
+        self.__header_font = pg.font.Font(FONT_TEXT_PATH, FONT_HEADER_SIZE)
+        self.__text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
+        self.all_content = pg.Surface(self.__screen.get_size()).convert_alpha()
+        self.all_content.fill((0, 0, 0, 0))
+        self.back = False
+        self.is_started = False
+        self.__prepare_screen()
+        self.__grand_update()
+
+    def __prepare_screen(self):
+        self.all_content.fill((0, 0, 0, 0))
+        Common.all_buttons.empty()
+        Common.all_input_boxes.empty()
+        main_text_stroke_font = pg.font.Font(FONT_TEXT_PATH, FONT_MAIN_GAME_SIZE + 2)
+        main_text_stroke = main_text_stroke_font.render('GAME',
+                                                        True,
+                                                        Common.MAIN_STROKE_COLOR)
+        main_text = self.__main_text_font.render('GAME',
+                                                 True,
+                                                 Common.MAIN_COLOR)
+        main_text_pos = (self.__screen.get_width() // 2 -
+                         main_text.get_width() // 2, 0)
+
+        main_text_stroke_pos = (self.__screen.get_width() // 2 -
+                                main_text_stroke.get_width() // 2, 0)
+
+        self.all_content.blit(main_text_stroke, main_text_stroke_pos)
+        self.all_content.blit(main_text, main_text_pos)
+
+        back_button = create_back_button(main_text_stroke_pos[0],
+                                         main_text_stroke_pos[1] + main_text_stroke.get_height() - BACK_BTN_SIZE[1])
+        Common.all_buttons.add(back_button)
+
+    def mouse_motion(self, pos):
+        colorize_buttons(pos)
+        self.__grand_update()
+
+    def mouse_btn_down(self, mouse_btn, pos):
+        button = get_button_on_click(pos)
+        if button is not None:
+            if mouse_btn == 1:
+                if button.button_type in ['BACK', 'START']:
+                    with open('saved_info.json', 'r') as info:
+                        all_info = json.load(info)
+                    #all_info['username'] = self.__username_input_box.text
+                    with open('saved_info.json', 'w') as info:
+                        json.dump(all_info, info)
+                    if button.button_type == 'BACK':
+                        self.back = True
+                    elif button.button_type == 'START':
+                        self.is_started = True
+        self.__grand_update()
+
+    def __grand_update(self):
+        self.__screen.fill(Common.BACKGROUND)
+        self.__screen.blit(self.all_content, (0, 0))
+        Common.all_buttons.draw(self.__screen)
+        Common.all_input_boxes.draw(self.__screen)
+        pg.display.update()
 
 
 class Button(pg.sprite.Sprite):
@@ -274,7 +436,7 @@ class Chessboard:
         # Defining constants from the konfig or __init__ params
         self.__screen = parent_surface
         self.__count = root_count
-        self.__board_data = board_data.board
+        self.__board_data = board
         self.__size = root_size
         self.__pieces = PIECES_DICT
         self.__input_box_font_size = FONT_TEXT_SIZE
@@ -309,11 +471,10 @@ class Chessboard:
         self.__clicked = False
         self.__can_drag = False
         self.back = False
+        self.is_piece_killed = False
+        self.is_checked = False
         self.__turn = None
         self.__turn_increment_check = True
-        # Dictionaries
-        self.__func_keys = [pg.K_LCTRL, pg.K_RCTRL, pg.K_v, pg.K_RETURN, pg.K_BACKSPACE, pg.K_c]
-        self.__hotkey = {pg.K_LCTRL: False, pg.K_RCTRL: False, pg.K_v: False, pg.K_c: False}
         # Initialization methods
         pg.display.set_caption('Chess Session')
         self.__prepare_screen()
@@ -331,8 +492,15 @@ class Chessboard:
 
     def __play_move_sound(self):
         """Activates when a piece have been moved"""
-        sound = pg.mixer.Sound(MUSIC_PATH + MOVE_SOUND + str(random.randint(1, 7)) + '.ogg')
+        if self.is_checked:
+            sound = pg.mixer.Sound(MUSIC_PATH + 'effects/check.wav')
+        elif self.is_piece_killed:
+            sound = pg.mixer.Sound(MUSIC_PATH + MOVE_SOUND + '7.ogg')
+        else:
+            sound = pg.mixer.Sound(MUSIC_PATH + MOVE_SOUND + str(random.randint(1, 6)) + '.ogg')
         sound.play()
+        self.is_checked = False
+        self.is_piece_killed = False
 
     def __prepare_screen(self):
         """Draws background"""
@@ -365,26 +533,35 @@ class Chessboard:
         self.__blit_to_play_board()
 
         # Moves the board to the window center
-        play_board_rect = self.__play_board_view.get_rect()
-        play_board_rect.x += (self.__screen.get_width() - play_board_rect.width) // 2
-        play_board_rect.y += (self.__screen.get_height() - play_board_rect.height) // 4
-        self.__play_board_view_pos = (play_board_rect.x, play_board_rect.y)
-        self.__screen.blit(self.__play_board_view, play_board_rect)
+        self.play_board_rect = self.__play_board_view.get_rect()
+        self.play_board_rect.x += (self.__screen.get_width() - self.play_board_rect.width) // 2
+        self.play_board_rect.y += (self.__screen.get_height() - self.play_board_rect.height) // 4
+        self.__play_board_view_pos = (self.play_board_rect.x, self.play_board_rect.y)
+        self.__screen.blit(self.__play_board_view, self.play_board_rect)
         roots_coord_offset = (
-            play_board_rect.x + self.num_fields_depth,
-            play_board_rect.y + self.num_fields_depth,)
+            self.play_board_rect.x + self.num_fields_depth,
+            self.play_board_rect.y + self.num_fields_depth,)
         self.__apply_offset_for_roots(roots_coord_offset)
 
-        self.__draw_input_box(play_board_rect)
+        self.__draw_input_box(self.play_board_rect)
 
         pg.display.update()
 
     def __draw_input_box(self, board_rect: pg.Rect):
         """Draws input box in the bottom"""
-        self.__input_box = InputBox(board_rect)
-        self.__all_input_boxes.add(self.__input_box)
+        self.__input_box = InputBox(board_rect, 0, 0, 0, 0, 0, 0)
+        Common.all_input_boxes.add(self.__input_box)
 
     def __draw_all_buttons(self):
+        btn_count_right = 0
+        self.__fen_reset_button = Button('RESET',
+                                         (self.__play_board_view_pos[0] + self.play_board_rect.width +
+                                         (self.__screen.get_width() -
+                                          (self.play_board_rect.x + self.play_board_rect.width))
+                                         // 2 - MAIN_BTN_SIZE[0] // 2, self.play_board_rect.y +
+                                         MAIN_BTN_SIZE[1] * btn_count_right + 10 * btn_count_right))
+        Common.all_buttons.add(self.__fen_reset_button)
+        btn_count_right += 1
         self.__copy_button = Button('COPY',
                                     (self.__input_box.rect.x +
                                      self.__input_box.rect.width,
@@ -559,6 +736,11 @@ class Chessboard:
 
         self.__input_box.text = fen_string  # Putting the fen string to the input bar
         self.__input_box.put_char('')  # Updating the text
+        with open('saved_info.json', 'r') as info:
+            all_info = json.load(info)
+        with open('saved_info.json', 'w') as info:
+            all_info['fen string'] = fen_string
+            json.dump(all_info, info)
 
     def __create_piece(self, piece_sym: str, board_data_coord: tuple):
         """Creates a single piece"""
@@ -676,7 +858,16 @@ class Chessboard:
                 if button.button_type == 'FLIP':
                     self.__flip()
                 elif button.button_type == 'COPY':
-                    self.__copy_to_buffer()
+                    copy_to_buffer(self.__input_box)
+                elif button.button_type == 'RESET':
+                    self.__input_box.text = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+                    self.__input_box.put_char('')
+                    self.__setup_board_with_fen()
+                    with open('saved_info.json', 'r') as info:
+                        all_info = json.load(info)
+                    with open('saved_info.json', 'w') as info:
+                        all_info['fen string'] = self.__input_box.text
+                        json.dump(all_info, info)
                 elif button.button_type == 'BACK':
                     self.back = True
         self.__pressed_input_box = self.__get_input_box(pos)
@@ -751,43 +942,29 @@ class Chessboard:
                     Common.all_choosing_pieces.empty()
                     self.__write_to_board_data()
             if self.__clicked:
-                self.__move_or_select_piece(self.__released_root)
+                if button_type == 1:
+                    self.__move_or_select_piece(self.__released_root)
         else:
-            self.__move_or_select_piece(self.__pressed_root)
+            if button_type == 1:
+                self.__move_or_select_piece(self.__pressed_root)
         self.__clicked = False
         self.__grand_update()
 
-    def __copy_to_buffer(self):
-        clip.copy(self.__input_box.text)
-
-    def __check_copy(self):
-        if (self.__hotkey[pg.K_LCTRL] or self.__hotkey[pg.K_RCTRL]) and self.__hotkey[pg.K_c]:
-            self.__copy_to_buffer()
-            return True
-        else:
-            return False
-
-    def __check_paste(self):
-        """Checks if the user's keyboard input is Ctrl+V"""
-        if (self.__hotkey[pg.K_LCTRL] or self.__hotkey[pg.K_RCTRL]) and self.__hotkey[pg.K_v]:
-            self.__input_box.put_char(clip.paste())
-            return True
-        else:
-            return False
-
     def keyboard_btn_down(self, event):
         """Works when the keyboard btn is clicked"""
-        if self.__input_box.active and event.key in self.__func_keys:
+        if self.__input_box.active and event.key in func_keys:
             if event.key == pg.K_LCTRL:  # Left Ctrl
-                self.__hotkey[pg.K_LCTRL] = True
+                Common.hotkeys[pg.K_LCTRL] = True
 
             if event.key == pg.K_RCTRL:  # Right Ctrl
-                self.__hotkey[pg.K_RCTRL] = True
+                Common.hotkeys[pg.K_RCTRL] = True
 
             if event.key == pg.K_v:  # v
-                self.__hotkey[pg.K_v] = True
-                if not self.__check_paste():
+                Common.hotkeys[pg.K_v] = True
+                if not check_paste():
                     self.__input_box.put_char(event.unicode)
+                else:
+                    self.__input_box.put_char(clip.paste())
 
             if event.key == pg.K_RETURN:  # Enter
                 self.__setup_board_with_fen()
@@ -796,23 +973,13 @@ class Chessboard:
                 self.__input_box.del_char()
 
             if event.key == pg.K_c:
-                self.__hotkey[pg.K_c] = True
-                if not self.__check_copy():
+                Common.hotkeys[pg.K_c] = True
+                if not check_copy(self.__input_box):
                     self.__input_box.put_char(event.unicode)
 
         elif self.__input_box.active:  # Works if user didn't press any functional key
             self.__input_box.put_char(event.unicode)
         self.__grand_update()
-
-    def keyboard_btn_up(self, event):
-        """Works when the keyboard btn is released"""
-        # Releasing all keys
-        if event.key == pg.K_LCTRL:
-            self.__hotkey[pg.K_LCTRL] = False
-        if event.key == pg.K_RCTRL:
-            self.__hotkey[pg.K_RCTRL] = False
-        if event.key == pg.K_v:
-            self.__hotkey[pg.K_v] = False
 
     def __flip(self):
         self.__unmark_all_marks()
@@ -895,6 +1062,7 @@ class Chessboard:
     def kill_piece(self, piece):
         piece.kill()
         Common.all_pieces.remove(piece)
+        self.is_piece_killed = True
 
     def __create_new_piece(self, new_piece, new_piece_coords, pawn):
         piece = self.__create_piece(new_piece.piece_name, (new_piece_coords[1][1],
@@ -919,7 +1087,6 @@ class Chessboard:
         self.__write_fen_from_board()
 
     def __after_move_preps(self, piece, root):
-        self.__play_move_sound()
         self.__unmark_all_marks()
         Common.other_map[2] = '-'
 
@@ -939,6 +1106,7 @@ class Chessboard:
         self.__uncheck_the_king(piece.color)
         self.__check_check(piece)
         self.__check_mate(piece.color)
+        self.__play_move_sound()
         self.__change_turn()
         self.__turn_increment_check ^= True
         if self.__turn_increment_check:
@@ -1014,6 +1182,7 @@ class Chessboard:
     def __check_logic(self, king: King):
         print('Check for white' if king.color == 'w' else 'Check for black')
         king.is_checked = True
+        self.is_checked = True
 
     def __are_moves(self, color):
         no_moves = True
@@ -1055,7 +1224,7 @@ class Chessboard:
         self.__screen.blit(self.__background, (0, 0))
         self.__screen.blit(self.__play_board_view, self.__play_board_view_pos)
         Common.all_roots.draw(self.__screen)
-        self.__all_input_boxes.draw(self.__screen)
+        Common.all_input_boxes.draw(self.__screen)
         Common.all_buttons.draw(self.__screen)
         self.__all_selects.draw(self.__screen)
         self.__all_checks.draw(self.__screen)
@@ -1069,20 +1238,32 @@ class Chessboard:
 class InputBox(pg.sprite.Sprite):
     """All the input boxes main class"""
 
-    def __init__(self, board_rect: pg.Rect):
+    def __init__(self, board_rect: pg.Rect, optx: int, opty: int, width: str, height: str,
+                 btn_cnt: int, text: str = '',
+                 font_size: str = FONT_INPUT_BOX_SIZE, input_box_type: str = 'fen'):
         super().__init__()
-        x, y = board_rect.x, board_rect.y
-        width, height = board_rect.width, board_rect.height
-        buttons_count = 2
-        width -= INPUT_BOX_HEIGHT * buttons_count
-        self.input_box_font_height = FONT_INPUT_BOX_SIZE
-        self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_height)
-        self.text = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+        if input_box_type == 'fen':
+            x, y = board_rect.x, board_rect.y
+            board_width, board_height = board_rect.width, board_rect.height
+            buttons_count = 2
+            board_width -= INPUT_BOX_HEIGHT * buttons_count
+            with open('saved_info.json', 'r') as info:
+                self.text = json.load(info)['fen string']
+            self.image = pg.Surface((board_width, INPUT_BOX_HEIGHT)).convert_alpha()
+            self.rect = pg.Rect(x, 2 * y + board_height, board_width, INPUT_BOX_HEIGHT)
+        elif input_box_type == 'custom':
+            x, y = optx, opty
+            buttons_count = btn_cnt
+            width -= height * buttons_count
+            self.text = text
+            self.image = pg.Surface((width, height)).convert_alpha()
+            self.rect = pg.Rect(x, y, width, height)
+
+        self.input_box_font_size = font_size
+        self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_size)
         self.__fen_text = None
         self.active = False
-        self.image = pg.Surface((width, INPUT_BOX_HEIGHT)).convert_alpha()
-        self.image.fill(BLACK)
-        self.rect = pg.Rect(x, 2 * y + height, width, INPUT_BOX_HEIGHT)
+        self.image.fill(Common.MAIN_COLOR)
         self.__update_text()
 
     def activate(self):
@@ -1120,8 +1301,8 @@ class InputBox(pg.sprite.Sprite):
         while not done:
             if (self.__fen_text.get_rect().width + 14 > self.rect.width or
                     self.__fen_text.get_rect().height + 14 > self.rect.height):
-                self.input_box_font_height -= 1
-                self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_height)
+                self.input_box_font_size -= 1
+                self.input_box_font = pg.font.Font(FONT_TEXT_PATH, self.input_box_font_size)
                 self.__fen_text = self.input_box_font.render(self.text, True, Common.MAIN_STROKE_COLOR)
             else:
                 done = True

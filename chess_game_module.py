@@ -37,7 +37,10 @@ def colorize_buttons(pos):
         if button.rect.collidepoint(pos):
             button.second_color = Common.SELECTED_COLOR
         else:
-            button.second_color = Common.MAIN_STROKE_COLOR
+            if button.selected:
+                button.second_color = Common.SELECTED_COLOR
+            else:
+                button.second_color = Common.MAIN_STROKE_COLOR
         if button.second_color != color:
             button.update()
 
@@ -375,6 +378,18 @@ class GameModeChanger:
                                          main_text_stroke_pos[1] + main_text_stroke.get_height() - BACK_BTN_SIZE[1])
         Common.all_buttons.add(back_button)
 
+        content_list_pos = main_text_stroke.get_height() + 15
+        back_btn_end_x = back_button.rect.x + back_button.rect.width + 10
+        game_mode_btn_size = ((self.__screen.get_width() - back_btn_end_x * 2) // 3, 50)
+        online_btn = Button('ONLINE', (back_btn_end_x, content_list_pos), game_mode_btn_size, 24, 3, True)
+        back_btn_end_x += game_mode_btn_size[0] + 10
+        bot_btn = Button('BOT', (back_btn_end_x, content_list_pos), game_mode_btn_size, 24, 3, True)
+        back_btn_end_x += game_mode_btn_size[0] + 10
+        sandbox_btn = Button('SANDBOX', (back_btn_end_x, content_list_pos), game_mode_btn_size, 24, 3, True)
+        Common.all_buttons.add(online_btn)
+        Common.all_buttons.add(bot_btn)
+        Common.all_buttons.add(sandbox_btn)
+
     def mouse_motion(self, pos):
         colorize_buttons(pos)
         self.__grand_update()
@@ -393,6 +408,14 @@ class GameModeChanger:
                         self.back = True
                     elif button.button_type == 'START':
                         self.is_started = True
+                if button.can_be_selected:
+                    for btn in Common.all_buttons:
+                        btn.second_color = Common.MAIN_STROKE_COLOR
+                        btn.selected = False
+                        btn.update()
+                    button.selected = True
+                    button.second_color = Common.SELECTED_COLOR
+                    button.update()
         self.__grand_update()
 
     def __grand_update(self):
@@ -406,7 +429,7 @@ class GameModeChanger:
 class Button(pg.sprite.Sprite):
     def __init__(self, btn_type: str, button_pos: tuple,
                  size: tuple = MAIN_BTN_SIZE, font_size: int = FONT_MAIN_BUTTONS_SIZE,
-                 stroke_size: int = 3):
+                 stroke_size: int = 3, selectable: bool = False):
         super().__init__()
         self.stroke_size = stroke_size
         self.image = pg.Surface(size)
@@ -416,6 +439,8 @@ class Button(pg.sprite.Sprite):
         self.second_color = Common.MAIN_STROKE_COLOR
         self.text_font = pg.font.Font(FONT_TEXT_PATH, font_size)
         self.text = None
+        self.can_be_selected = selectable
+        self.selected = False
         self.update()
 
     def update(self):

@@ -349,6 +349,8 @@ class GameModeChanger:
         self.__text_font = pg.font.Font(FONT_TEXT_PATH, FONT_TEXT_SIZE)
         self.all_content = pg.Surface(self.__screen.get_size()).convert_alpha()
         self.all_content.fill((0, 0, 0, 0))
+        self.additional_prefs = pg.Surface(self.__screen.get_size()).convert_alpha()
+        self.additional_prefs.fill((0, 0, 0, 0))
         self.back = False
         self.is_started = False
         self.__prepare_screen()
@@ -390,6 +392,28 @@ class GameModeChanger:
         Common.all_buttons.add(bot_btn)
         Common.all_buttons.add(sandbox_btn)
 
+        content_list_pos += game_mode_btn_size[1] + 20
+
+        time_control_ask = self.__header_font.render('Time control: ', True, Common.MAIN_STROKE_COLOR)
+        self.additional_prefs.blit(time_control_ask,
+                                   (back_button.rect.x + back_button.rect.width + 15, content_list_pos))
+
+        minute_control_button_size = (75, 35)
+        minute_control_button_pos_x = old_control_pos_x = (back_button.rect.x + back_button.rect.width + 10 +
+                                                           time_control_ask.get_width())
+
+        minute_controls = ('10 SEC', '15 SEC', '30 SEC', '45 SEC', '1 MIN', '3 MIN', '5 MIN', '10 MIN',
+                           '15 MIN', '30 MIN', '∞')
+
+        for control in minute_controls:
+            if minute_control_button_pos_x + minute_control_button_size[0] > sandbox_btn.rect.x + sandbox_btn.rect.width:
+                minute_control_button_pos_x = old_control_pos_x
+                content_list_pos += minute_control_button_size[1] + 3
+            control = Button(control, (minute_control_button_pos_x, content_list_pos),
+                             minute_control_button_size, 16 if control != '∞' else 35, 2, True)
+            Common.all_buttons.add(control)
+            minute_control_button_pos_x += minute_control_button_size[0] + 3
+
     def mouse_motion(self, pos):
         colorize_buttons(pos)
         self.__grand_update()
@@ -421,6 +445,7 @@ class GameModeChanger:
     def __grand_update(self):
         self.__screen.fill(Common.BACKGROUND)
         self.__screen.blit(self.all_content, (0, 0))
+        self.__screen.blit(self.additional_prefs, (0, 0))
         Common.all_buttons.draw(self.__screen)
         Common.all_input_boxes.draw(self.__screen)
         pg.display.update()

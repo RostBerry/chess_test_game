@@ -42,6 +42,7 @@ PALETTES_LIST = PALETTES.keys()
 # Palette in common.py
 ACTIVE_ROOT_COLOR = (0, 180, 0, 50)
 CHECK_ROOT_COLOR = (255, 0, 0, 80)
+NOTHING = (0, 0, 0, 0)
 ROOT_SUBSCRIPT_COLOR = WHITE
 PIECES_DICT = {
     'K': ("King", "w"), 'k': ("King", "b"),

@@ -3,6 +3,7 @@ from pieces import *
 import pyperclip as clip
 from common import *
 import random
+import datetime
 
 AVAILABLE_IMG = Image.open(IMG_PATH + OTHER_IMG_PATH + 'available.png').resize((ROOT_SIZE, ROOT_SIZE))
 AVAILABLE_SURF = pg.Surface((ROOT_SIZE, ROOT_SIZE), pg.SRCALPHA).convert_alpha()
@@ -383,11 +384,11 @@ class GameModeChanger:
         content_list_pos = main_text_stroke.get_height() + 15
         back_btn_end_x = back_button.rect.x + back_button.rect.width + 10
         game_mode_btn_size = ((self.__screen.get_width() - back_btn_end_x * 2) // 3, 50)
-        online_btn = Button('ONLINE', (back_btn_end_x, content_list_pos), game_mode_btn_size, 24, 3, True)
+        online_btn = Button('ONLINE', (back_btn_end_x, content_list_pos), game_mode_btn_size, 24, 3, 1)
         back_btn_end_x += game_mode_btn_size[0] + 10
-        bot_btn = Button('BOT', (back_btn_end_x, content_list_pos), game_mode_btn_size, 24, 3, True)
+        bot_btn = Button('BOT', (back_btn_end_x, content_list_pos), game_mode_btn_size, 24, 3, 1)
         back_btn_end_x += game_mode_btn_size[0] + 10
-        sandbox_btn = Button('SANDBOX', (back_btn_end_x, content_list_pos), game_mode_btn_size, 24, 3, True)
+        sandbox_btn = Button('SANDBOX', (back_btn_end_x, content_list_pos), game_mode_btn_size, 24, 3, 1)
         Common.all_buttons.add(online_btn)
         Common.all_buttons.add(bot_btn)
         Common.all_buttons.add(sandbox_btn)
@@ -410,9 +411,14 @@ class GameModeChanger:
                 minute_control_button_pos_x = old_control_pos_x
                 content_list_pos += minute_control_button_size[1] + 3
             control = Button(control, (minute_control_button_pos_x, content_list_pos),
-                             minute_control_button_size, 16 if control != '∞' else 35, 2, True)
+                             minute_control_button_size, 16 if control != '∞' else 35, 2, 2)
             Common.all_buttons.add(control)
             minute_control_button_pos_x += minute_control_button_size[0] + 3
+            
+        content_list_pos += minute_control_button_size[1] * 2
+        start_btn = Button('START', (self.__screen.get_width() // 2 - MAIN_BTN_SIZE[0] // 2, content_list_pos),
+                           MAIN_BTN_SIZE)
+        Common.all_buttons.add(start_btn)
 
     def mouse_motion(self, pos):
         colorize_buttons(pos)
@@ -422,6 +428,20 @@ class GameModeChanger:
         button = get_button_on_click(pos)
         if button is not None:
             if mouse_btn == 1:
+                if button.selection_group > 0:
+                    for btn in Common.all_buttons:
+                        if btn.selection_group == button.selection_group:
+                            btn.second_color = Common.MAIN_STROKE_COLOR
+                            btn.selected = False
+                            btn.update()
+                    button.selected = True
+                    button.second_color = Common.SELECTED_COLOR
+                    button.update()
+                    if button.selection_group == 1:
+                        Common.game_mode['mode'] = button.button_type
+                    elif button.button_type == 2:
+                        Common.game_mode['time control'] = button.button_type
+
                 if button.button_type in ['BACK', 'START']:
                     with open('saved_info.json', 'r') as info:
                         all_info = json.load(info)
@@ -432,14 +452,6 @@ class GameModeChanger:
                         self.back = True
                     elif button.button_type == 'START':
                         self.is_started = True
-                if button.can_be_selected:
-                    for btn in Common.all_buttons:
-                        btn.second_color = Common.MAIN_STROKE_COLOR
-                        btn.selected = False
-                        btn.update()
-                    button.selected = True
-                    button.second_color = Common.SELECTED_COLOR
-                    button.update()
         self.__grand_update()
 
     def __grand_update(self):
@@ -454,7 +466,7 @@ class GameModeChanger:
 class Button(pg.sprite.Sprite):
     def __init__(self, btn_type: str, button_pos: tuple,
                  size: tuple = MAIN_BTN_SIZE, font_size: int = FONT_MAIN_BUTTONS_SIZE,
-                 stroke_size: int = 3, selectable: bool = False):
+                 stroke_size: int = 3, selectable: int = 0):
         super().__init__()
         self.stroke_size = stroke_size
         self.image = pg.Surface(size)
@@ -464,7 +476,7 @@ class Button(pg.sprite.Sprite):
         self.second_color = Common.MAIN_STROKE_COLOR
         self.text_font = pg.font.Font(FONT_TEXT_PATH, font_size)
         self.text = None
-        self.can_be_selected = selectable
+        self.selection_group = selectable
         self.selected = False
         self.update()
 
@@ -484,6 +496,7 @@ class Chessboard:
     def __init__(self, parent_surface: pg.Surface, root_count: int = ROOT_COUNT,
                  root_size: int = ROOT_SIZE):
         # Defining constants from the konfig or __init__ params
+        Common.all_buttons.empty()
         self.__screen = parent_surface
         self.__count = root_count
         self.__board_data = board
@@ -529,16 +542,18 @@ class Chessboard:
         pg.display.set_caption('Chess Session')
         self.__prepare_screen()
         self.__draw_play_board()
+        self.__start_time = datetime.datetime.now()
+        time_control = Common.game_mode['time control']
+        self.__do_time_control = False if len(time_control) > 1 else True
+        if self.__do_time_control:
+            self.__time_control = int(time_control[1]) * (1 if time_control[2:] == 'SEC' else 60)
+        else:
+            self.__time_control = None
+
         self.__draw_all_buttons()
         self.__setup_board_with_fen()
         # self.__prepare_music()
         self.__grand_update()
-
-    # def __prepare_music(self):
-    #     """Creates a nice soundtrack"""
-    #     pg.mixer.music.load(MUSIC_PATH + BACKGROUND_MUSIC)
-    #     pg.mixer.music.set_volume(0.3)
-    #     pg.mixer.music.play(-1)
 
     def __play_move_sound(self):
         """Activates when a piece have been moved"""
@@ -554,10 +569,6 @@ class Chessboard:
 
     def __prepare_screen(self):
         """Draws background"""
-        # background_img = Image.open(IMG_PATH + STATIC_IMG_PATH + BACKGROUND_IMG).resize(WINDOW_SIZE)
-        # background_img = pg.image.fromstring(background_img.tobytes(),
-        # background_img.size,
-        # background_img.mode)
         Common.all_marks.empty()
         self.__background = pg.Surface(self.__screen.get_size())
         self.__background.fill(Common.BACKGROUND)
@@ -573,13 +584,6 @@ class Chessboard:
         self.__play_board_view = pg.Surface((2 * self.num_fields_depth + self.total_width,
                                              2 * self.num_fields_depth + self.total_width), pg.SRCALPHA)
 
-        # board_background_img = Image.open(IMG_PATH +
-        # STATIC_IMG_PATH +
-        # BOARD_BACKGROUND_IMG).resize((play_board_view.get_width(),
-        # play_board_view.get_height()))
-        # board_background_img = pg.image.fromstring(board_background_img.tobytes(),
-        # board_background_img.size,
-        # board_background_img.mode)
         self.__blit_to_play_board()
 
         # Moves the board to the window center
@@ -596,6 +600,17 @@ class Chessboard:
         self.__draw_input_box(self.play_board_rect)
 
         pg.display.update()
+
+    def __draw_timer(self):
+        if self.__do_time_control:
+            black_timer_pos = (self.play_board_rect.x - 15, self.play_board_rect.y)
+            white_timer_pos = (self.play_board_rect.x - 15,
+                               self.play_board_rect.y + self.play_board_rect.height - TIMER_SIZE[1])
+            white_timer = black_timer = pg.Surface(TIMER_SIZE).convert_alpha()
+            black_timer.fill(BLACK)
+            white_timer.fill(BLACK)
+            self.__screen.blit(black_timer, black_timer_pos)
+            self.__screen.blit(white_timer, white_timer_pos)
 
     def __draw_input_box(self, board_rect: pg.Rect):
         """Draws input box in the bottom"""
@@ -1276,6 +1291,7 @@ class Chessboard:
         Common.all_roots.draw(self.__screen)
         Common.all_input_boxes.draw(self.__screen)
         Common.all_buttons.draw(self.__screen)
+        self.__draw_timer()
         self.__all_selects.draw(self.__screen)
         self.__all_checks.draw(self.__screen)
         Common.all_marks.draw(self.__screen)

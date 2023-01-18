@@ -16,6 +16,7 @@ FONT_HEADER_SIZE = 24
 INPUT_FONT_COLOR = (50, 255, 50)
 INPUT_BOX_HEIGHT = 40
 BACK_BTN_SIZE = (120, 60)
+TIMER_SIZE = (200, 75)
 IMG_PATH = 'assets/images/'
 STATIC_IMG_PATH = 'static images/'
 OTHER_IMG_PATH = 'other images/'

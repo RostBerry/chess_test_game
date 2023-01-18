@@ -13,6 +13,7 @@ class Common:
     all_choosing_cells = pg.sprite.Group()
     all_buttons = pg.sprite.Group()
     roots_dict = {}
+    game_mode = {'time control': None, 'mode': None}
     hotkeys = {pg.K_LCTRL: False, pg.K_RCTRL: False, pg.K_v: False, pg.K_c: False}
     pieces_map = []
     other_map = []

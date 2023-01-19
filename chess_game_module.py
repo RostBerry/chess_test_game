@@ -4,6 +4,7 @@ import pyperclip as clip
 from common import *
 import random
 import datetime
+import socket
 
 AVAILABLE_IMG = Image.open(IMG_PATH + OTHER_IMG_PATH + 'available.png').resize((ROOT_SIZE, ROOT_SIZE))
 AVAILABLE_SURF = pg.Surface((ROOT_SIZE, ROOT_SIZE), pg.SRCALPHA).convert_alpha()
@@ -439,8 +440,13 @@ class GameModeChanger:
                     button.update()
                     if button.selection_group == 1:
                         Common.game_mode['mode'] = button.button_type
-                    elif button.button_type == 2:
+                    elif button.selection_group == 2:
                         Common.game_mode['time control'] = button.button_type
+
+                    print(button.button_type)
+
+                    for elem in Common.game_mode.keys():
+                        print(elem, ':', Common.game_mode[elem])
 
                 if button.button_type in ['BACK', 'START']:
                     with open('saved_info.json', 'r') as info:
@@ -540,20 +546,22 @@ class Chessboard:
         self.__turn_increment_check = True
         # Initialization methods
         pg.display.set_caption('Chess Session')
-        self.__prepare_screen()
-        self.__draw_play_board()
         self.__start_time = datetime.datetime.now()
         time_control = Common.game_mode['time control']
-        self.__do_time_control = False if len(time_control) > 1 else True
+        self.__game_mode = Common.game_mode['mode']
+        self.__do_time_control = True if len(time_control) > 1 else False
         if self.__do_time_control:
-            self.__time_control = int(time_control[1]) * (1 if time_control[2:] == 'SEC' else 60)
+            self.__time_control = int(time_control[:2]) * (1 if time_control[3:] == 'SEC' else 60)
         else:
             self.__time_control = None
+        self.__prepare_screen()
+        self.__draw_waiting_window()
+        self.__draw_play_board()
 
         self.__draw_all_buttons()
         self.__setup_board_with_fen()
         # self.__prepare_music()
-        self.__grand_update()
+        self.grand_update()
 
     def __play_move_sound(self):
         """Activates when a piece have been moved"""
@@ -573,6 +581,14 @@ class Chessboard:
         self.__background = pg.Surface(self.__screen.get_size())
         self.__background.fill(Common.BACKGROUND)
         self.__screen.blit(self.__background, (0, 0))
+
+    def __draw_waiting_window(self):
+        if self.__game_mode == 'ONLINE':
+            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            client.connect((HOST, PORT))
+
+            print(client.recv(1024).decode('utf-8'))
+            print(client.recv(1024).decode('utf-8'))
 
     def __draw_play_board(self):
         """Draws play board"""
@@ -599,18 +615,24 @@ class Chessboard:
 
         self.__draw_input_box(self.play_board_rect)
 
+        self.__black_timer_pos = (self.play_board_rect.x - TIMER_SIZE[0] - 15, self.play_board_rect.y + TIMER_SIZE[1])
+        self.__white_timer_pos = (self.play_board_rect.x - TIMER_SIZE[0] - 15,
+                                  self.play_board_rect.y + self.play_board_rect.height - TIMER_SIZE[1] * 2)
+
         pg.display.update()
 
     def __draw_timer(self):
         if self.__do_time_control:
-            black_timer_pos = (self.play_board_rect.x - 15, self.play_board_rect.y)
-            white_timer_pos = (self.play_board_rect.x - 15,
-                               self.play_board_rect.y + self.play_board_rect.height - TIMER_SIZE[1])
             white_timer = black_timer = pg.Surface(TIMER_SIZE).convert_alpha()
-            black_timer.fill(BLACK)
-            white_timer.fill(BLACK)
-            self.__screen.blit(black_timer, black_timer_pos)
-            self.__screen.blit(white_timer, white_timer_pos)
+            black_timer.fill(Common.MAIN_STROKE_COLOR)
+            white_timer.fill(Common.MAIN_STROKE_COLOR)
+            black_time_value = str(self.__start_time + datetime.timedelta(seconds=self.__time_control) -
+                                   datetime.datetime.now())[2:9]
+            black_time = self.__chessboard_font.render(black_time_value, True,
+                                                       Common.BOARD_TEXT_COLOR)
+            black_timer.blit(black_time, (0, 0))
+            self.__screen.blit(black_timer, self.__black_timer_pos)
+            self.__screen.blit(white_timer, self.__white_timer_pos)
 
     def __draw_input_box(self, board_rect: pg.Rect):
         """Draws input box in the bottom"""
@@ -773,7 +795,7 @@ class Chessboard:
 
             Common.all_pieces.empty()
             self.__setup_board()
-            self.__grand_update()
+            self.grand_update()
         else:
             print('Invalid FEN')
 
@@ -897,7 +919,7 @@ class Chessboard:
         else:
             colorize_buttons(pos)
 
-        self.__grand_update()
+        self.grand_update()
 
     def mouse_btn_down(self, button_type: int, pos: tuple):
         """Works when the mouse btn is clicked"""
@@ -973,7 +995,7 @@ class Chessboard:
                     self.__move_or_select_piece(self.__pressed_root)
                     self.__unmark_all_marks()
                     self.__unselect_all_roots()
-            self.__grand_update()
+            self.grand_update()
 
     def __taken_piece_logic(self, pos):
         self.__select_root(self.__pressed_root)
@@ -1013,7 +1035,7 @@ class Chessboard:
             if button_type == 1:
                 self.__move_or_select_piece(self.__pressed_root)
         self.__clicked = False
-        self.__grand_update()
+        self.grand_update()
 
     def keyboard_btn_down(self, event):
         """Works when the keyboard btn is clicked"""
@@ -1044,7 +1066,7 @@ class Chessboard:
 
         elif self.__input_box.active:  # Works if user didn't press any functional key
             self.__input_box.put_char(event.unicode)
-        self.__grand_update()
+        self.grand_update()
 
     def __flip(self):
         self.__unmark_all_marks()
@@ -1284,18 +1306,18 @@ class Chessboard:
         self.__all_selects.empty()
         self.__all_checks.empty()
 
-    def __grand_update(self):
+    def grand_update(self):
         """Refreshes the whole scene on the screen"""
         self.__screen.blit(self.__background, (0, 0))
         self.__screen.blit(self.__play_board_view, self.__play_board_view_pos)
         Common.all_roots.draw(self.__screen)
         Common.all_input_boxes.draw(self.__screen)
         Common.all_buttons.draw(self.__screen)
-        self.__draw_timer()
         self.__all_selects.draw(self.__screen)
         self.__all_checks.draw(self.__screen)
         Common.all_marks.draw(self.__screen)
         Common.all_pieces.draw(self.__screen)
+        self.__draw_timer()
         Common.all_choosing_cells.draw(self.__screen)
         Common.all_choosing_pieces.draw(self.__screen)
         pg.display.update()

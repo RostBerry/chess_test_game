@@ -9,6 +9,7 @@ renew_colors()
 
 chess = None
 options = None
+game_mode = None
 menu = Menu(screen)
 
 
@@ -73,19 +74,19 @@ try:
                 elif menu.is_quit:
                     run = False
 
-            elif options is not None:
+            if options is not None:
 
                 if options.back:
                     menu = Menu(screen)
                     options = None
 
-            elif chess is not None:
+            if chess is not None:
 
                 if chess.back:
                     menu = Menu(screen)
                     chess = None
 
-            elif game_mode is not None:
+            if game_mode is not None:
 
                 if game_mode.back:
                     menu = Menu(screen)
@@ -93,6 +94,9 @@ try:
                 elif game_mode.is_started:
                     game_mode = None
                     chess = Chessboard(screen)
+
+        if chess is not None:
+            chess.grand_update()
         clock.tick(FPS)
 except KeyboardInterrupt:
     pass

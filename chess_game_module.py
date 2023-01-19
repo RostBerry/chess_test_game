@@ -555,11 +555,12 @@ class Chessboard:
         else:
             self.__time_control = None
         self.__prepare_screen()
-        self.__draw_waiting_window()
         self.__draw_play_board()
 
         self.__draw_all_buttons()
         self.__setup_board_with_fen()
+
+        self.__draw_waiting_window()
         # self.__prepare_music()
         self.grand_update()
 

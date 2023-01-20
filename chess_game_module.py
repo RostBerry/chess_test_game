@@ -10,7 +10,7 @@ AVAILABLE_IMG = Image.open(IMG_PATH + OTHER_IMG_PATH + 'available.png').resize((
 AVAILABLE_SURF = pg.Surface((ROOT_SIZE, ROOT_SIZE), pg.SRCALPHA).convert_alpha()
 AVAILABLE_SURF.fill((0, 0, 0, 0))
 pg.draw.circle(AVAILABLE_SURF, BLACK, (AVAILABLE_SURF.get_width() // 2,
-                                           AVAILABLE_SURF.get_height() // 2), ROOT_SIZE // 5)
+                                       AVAILABLE_SURF.get_height() // 2), ROOT_SIZE // 5)
 TAKEABLE_IMG = Image.open(IMG_PATH + OTHER_IMG_PATH + 'takeable.png').resize((ROOT_SIZE, ROOT_SIZE))
 TAKEABLE_SURF = pg.Surface((ROOT_SIZE, ROOT_SIZE), pg.SRCALPHA).convert_alpha()
 TAKEABLE_SURF.fill(BLACK)
@@ -586,10 +586,20 @@ class Chessboard:
     def __draw_waiting_window(self):
         if self.__game_mode == 'ONLINE':
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client.connect((HOST, PORT))
 
+            waiting_window = DialogueWindow(self.__screen, 'waiting')
+            Common.all_dialogues.add(waiting_window)
+            self.grand_update()
+
+            client.connect((HOST, PORT))
+            print(clients_text := client.recv(1024).decode('utf-8'))
             print(client.recv(1024).decode('utf-8'))
-            print(client.recv(1024).decode('utf-8'))
+            Common.all_dialogues.empty()
+            self.color = clients_text[-5]
+        elif self.__game_mode == 'BOT':
+            self.color = 'w'
+        else:
+            self.color = 'wb'
 
     def __draw_play_board(self):
         """Draws play board"""
@@ -887,7 +897,7 @@ class Chessboard:
         """Returns the clicked piece"""
         for piece in Common.all_pieces:
             if piece.root_name[1] == root.root_name[1]:
-                if piece.color == self.__turn:
+                if piece.color == self.__turn and piece.color in self.color:
                     if self.__taken_piece is None:
                         return piece
                     else:
@@ -925,8 +935,6 @@ class Chessboard:
     def mouse_btn_down(self, button_type: int, pos: tuple):
         """Works when the mouse btn is clicked"""
         self.__clicked = True  # Statement needed to correct root selection
-        pressed_root = None
-        selected_root = None
         # Checking if the user clicked on root or input box
         if button_type == 1:
             if self.__choice is not None:
@@ -1289,6 +1297,8 @@ class Chessboard:
                         print('Stalemate')
                     else:
                         print('Mate for ' + ('white' if prob_king.piece_name == 'K' else 'black'))
+                    winlose = DialogueWindow(self.__screen, 'winin')
+                    Common.all_dialogues.add(winlose)
             return True
         return False
 
@@ -1319,6 +1329,7 @@ class Chessboard:
         Common.all_marks.draw(self.__screen)
         Common.all_pieces.draw(self.__screen)
         self.__draw_timer()
+        Common.all_dialogues.draw(self.__screen)
         Common.all_choosing_cells.draw(self.__screen)
         Common.all_choosing_pieces.draw(self.__screen)
         pg.display.update()
@@ -1482,3 +1493,21 @@ class ChoosingCell(pg.sprite.Sprite):
         choosing = ChoosingPiece(counter, pawn)
         choosing.rect = self.rect
         Common.all_choosing_pieces.add(choosing)
+
+
+class DialogueWindow(pg.sprite.Sprite):
+
+    def __init__(self, parent_screen: pg.Surface, dialogue_type: str):
+        super().__init__()
+        self.__screen = parent_screen
+        self.image = pg.Surface((self.__screen.get_width() // 100 * 60, self.__screen.get_height() // 100 * 60))
+        self.image.fill(Common.MAIN_COLOR)
+        pg.draw.rect(self.image, Common.MAIN_STROKE_COLOR, self.image.get_rect(), 3)
+        self.rect = pg.Rect((self.__screen.get_rect().width // 2 - self.image.get_rect().width // 2,
+                             self.__screen.get_rect().height // 2 - self.image.get_rect().height // 2),
+                            (self.image.get_rect().width, self.image.get_rect().height))
+        self.font = pg.font.Font(FONT_CHESSBOARD_PATH, FONT_HEADER_SIZE)
+        if dialogue_type == 'waiting':
+            waiting_text = self.font.render('Waiting for an opponent', True, Common.MAIN_STROKE_COLOR)
+            self.image.blit(waiting_text, (self.image.get_width() // 2 - waiting_text.get_width() // 2,
+                                           self.image.get_height() // 2 - waiting_text.get_height() // 2))

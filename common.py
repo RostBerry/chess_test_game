@@ -9,6 +9,7 @@ class Common:
     all_roots = pg.sprite.Group()
     all_marks = pg.sprite.Group()
     all_input_boxes = pg.sprite.Group()
+    all_dialogues = pg.sprite.Group()
     all_choosing_pieces = pg.sprite.Group()
     all_choosing_cells = pg.sprite.Group()
     all_buttons = pg.sprite.Group()

@@ -563,14 +563,13 @@ class Chessboard:
             self.__input_box.text = default_board
 
         self.__setup_board_with_fen()
-        if self.color == 'b':
-            self.__flip()
-            self.__setup_board_with_fen()
 
         self.__draw_waiting_window()
         self.__reset_timer()
-
         if self.color == 'b':
+            self.__flip()
+            self.__setup_board_with_fen()
+            self.grand_update()
             self.wait_next_move()
         self.grand_update()
 

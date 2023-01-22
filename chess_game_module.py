@@ -1325,10 +1325,10 @@ class Chessboard:
             if rec_data != 'None':
                 Common.go_next_waiting_loop = False
                 if self.color == 'b':
-                    self.__white_time = rec_data[0]
+                    self.__white_time = float(rec_data[0])
                 else:
-                    self.__black_time = rec_data[0]
-                self.__input_box.text = rec_data[1]
+                    self.__black_time = float(rec_data[0])
+                self.__input_box.text = float(rec_data[1])
                 self.__setup_board_with_fen()
             else:
 

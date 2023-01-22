@@ -1233,7 +1233,7 @@ class Chessboard:
             else:
                 self.__taken_piece.move_to_root(self.__pressed_root)
             if self.__taken_piece.is_moved:
-                self.__after_move_preps(self.__taken_piece, root)
+                self.__after_move_preps(self.__taken_piece)
             else:
                 self.__select_root(self.__pressed_root)
                 self.__selected_piece = self.__taken_piece
@@ -1248,7 +1248,7 @@ class Chessboard:
             else:
                 self.__selected_piece.move_to_root(self.__prev_piece_root)
             if self.__selected_piece.is_moved:
-                self.__after_move_preps(self.__selected_piece, root)
+                self.__after_move_preps(self.__selected_piece)
             self.__selected_piece = None
 
     def kill_piece(self, piece):

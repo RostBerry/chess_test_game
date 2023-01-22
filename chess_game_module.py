@@ -1313,6 +1313,7 @@ class Chessboard:
         if self.__game_mode != 'SANDBOX':
             if piece.color == self.color:
                 self.__send_to_opponent()
+                self.grand_update()
                 self.wait_next_move()
 
     def __send_to_opponent(self):

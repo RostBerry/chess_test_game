@@ -851,6 +851,8 @@ class Chessboard:
 
     def __setup_board_with_fen(self):
         """Decodes the Forsyth Edwards Notation and setups new board konfig"""
+        if self.color == 'b':
+            self.__flip()
         # Separating the fen string to pieces placement and additional info
         if Stockfish._is_fen_syntax_valid(self.__input_box.text):
 

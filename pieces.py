@@ -248,16 +248,6 @@ class Piece(pg.sprite.Sprite):
         new_all_pieces = Common.all_pieces.copy()
         for movable in self.movable_roots + self.takeable_roots:
             self.root_name = (self.root_name[0], movable)
-            # for root in Common.all_roots:
-            #     if root.root_name[1] == self.root_name[1]:
-            #         needed_root = root
-            #         break
-            # self.move_to_root(needed_root)
-            # Common.all_roots.draw(screen)
-            # Common.all_pieces.draw(screen)
-            # pg.display.update()
-            # print(self.piece_name, self.root_name)
-            # time.sleep(0.2)
             for piece in new_all_pieces:
                 if piece.root_name[1] == self.root_name[1] and piece is not self:
                     Common.all_pieces.remove(piece)
@@ -282,21 +272,10 @@ class Piece(pg.sprite.Sprite):
                                     new_takeables.remove(movable)
                                 else:
                                     pass
-                                    #print('abobo')
             Common.all_pieces = new_all_pieces.copy()
             self.root_name = old_position
             self.movable_roots = new_movables
             self.takeable_roots = new_takeables
-            # print(old_position)
-            # for root in Common.all_roots:
-            #     if root.root_name[1] == self.root_name[1]:
-            #         needed_root = root
-            #         break
-            # self.move_to_root(needed_root)
-            # Common.all_roots.draw(screen)
-            # Common.all_pieces.draw(screen)
-            # pg.display.update()
-            # print(self.piece_name, self.root_name)
 
 
 # noinspection PyTypeChecker

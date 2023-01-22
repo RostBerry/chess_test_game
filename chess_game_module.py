@@ -561,7 +561,11 @@ class Chessboard:
         self.__draw_all_buttons()
         if self.__game_mode != 'SANDBOX':
             self.__input_box.text = default_board
+
         self.__setup_board_with_fen()
+        if self.color == 'b':
+            self.__flip()
+            self.__setup_board_with_fen()
 
         self.__draw_waiting_window()
         self.__reset_timer()
@@ -601,7 +605,6 @@ class Chessboard:
             print(clients_text := self.client.recv(1024).decode('utf-8'))
             print(self.client.recv(1024).decode('utf-8'))
             Common.all_dialogues.empty()
-            self.color = clients_text[-5]
         elif self.__game_mode == 'BOT':
             self.color = 'w'
         else:
@@ -851,8 +854,6 @@ class Chessboard:
 
     def __setup_board_with_fen(self):
         """Decodes the Forsyth Edwards Notation and setups new board konfig"""
-        if self.color == 'b':
-            self.__flip()
         # Separating the fen string to pieces placement and additional info
         if Stockfish._is_fen_syntax_valid(self.__input_box.text):
 

@@ -920,11 +920,13 @@ class Chessboard:
 
         self.__input_box.text = fen_string  # Putting the fen string to the input bar
         self.__input_box.put_char('')  # Updating the text
-        with open('saved_info.json', 'r') as info:
-            all_info = json.load(info)
-        with open('saved_info.json', 'w') as info:
-            all_info['fen string'] = fen_string
-            json.dump(all_info, info)
+
+        if self.__game_mode == 'SANDBOX':
+            with open('saved_info.json', 'r') as info:
+                all_info = json.load(info)
+            with open('saved_info.json', 'w') as info:
+                all_info['fen string'] = fen_string
+                json.dump(all_info, info)
 
     def __create_piece(self, piece_sym: str, board_data_coord: tuple):
         """Creates a single piece"""
@@ -1328,7 +1330,7 @@ class Chessboard:
                     self.__white_time = float(rec_data[0])
                 else:
                     self.__black_time = float(rec_data[0])
-                self.__input_box.text = float(rec_data[1])
+                self.__input_box.text = rec_data[1]
                 self.__setup_board_with_fen()
             else:
 

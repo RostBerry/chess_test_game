@@ -15,8 +15,8 @@ user2, address2 = server.accept()
 print(f'{address2[0]} has been connected as black')
 user2.send(f'{address2[0]} has been connected as black'.encode('utf-8'))
 
-user1.send('Both players connected')
-user2.send('Both players connected')
+user1.send('Both players connected'.encode('utf-8'))
+user2.send('Both players connected'.encode('utf-8'))
 
 while True:
     rec_data1 = user1.recv(1024)

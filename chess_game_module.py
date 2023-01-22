@@ -1320,6 +1320,7 @@ class Chessboard:
     def wait_next_move(self):
         if self.__game_mode == 'ONLINE':
             rec_data = self.client.recv(1024).decode('utf-8').split('|')
+            print(rec_data)
             if rec_data != 'None':
                 self.client.send('received'.encode('utf-8'))
                 Common.go_next_waiting_loop = False

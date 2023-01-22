@@ -604,6 +604,7 @@ class Chessboard:
             print(clients_text := self.client.recv(1024).decode('utf-8'))
             print(self.client.recv(1024).decode('utf-8'))
             Common.all_dialogues.empty()
+            self.color = clients_text[-5]
         elif self.__game_mode == 'BOT':
             self.color = 'w'
         else:

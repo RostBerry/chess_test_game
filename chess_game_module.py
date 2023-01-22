@@ -700,10 +700,10 @@ class Chessboard:
             black_time_value = self.__timer_font.render(new_times[1], True,
                                                         Common.MAIN_COLOR if self.__turn == 'b'
                                                         else Common.BACKGROUND)
-            white_timer.blit(white_time_value,
+            white_timer.blit(white_time_value if not Common.is_flipped else black_time_value,
                              (TIMER_SIZE[0] // 2 - white_time_value.get_width() // 2,
                               TIMER_SIZE[1] // 2 - white_time_value.get_height() // 2))
-            black_timer.blit(black_time_value,
+            black_timer.blit(black_time_value if not Common.is_flipped else white_time_value,
                              (TIMER_SIZE[0] // 2 - black_time_value.get_width() // 2,
                               TIMER_SIZE[1] // 2 - black_time_value.get_height() // 2))
 

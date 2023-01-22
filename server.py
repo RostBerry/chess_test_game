@@ -19,15 +19,6 @@ user1.send('Both players connected')
 user2.send('Both players connected')
 
 while True:
+    rec_data = user1.recv(1024)
+    user2.send(rec_data)
 
-    user1.send('Connected successfully'.encode('utf-8'))
-    user2.send('Connected successfully'.encode('utf-8'))
-    while True:
-        msg = user1.recv(1024)
-        if msg.decode('utf-8') != 'quit':
-            print(f"{address1[0]}: {msg.decode('utf-8')}")
-            user1.send(input('Message: ').encode('utf-8'))
-        else:
-            user1.send('You have been disconnected'.encode('utf-8'))
-            break
-    print(f'{address1[0]} has been disconnected')

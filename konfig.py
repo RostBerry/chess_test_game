@@ -13,10 +13,12 @@ FONT_INPUT_BOX_SIZE = 18
 FONT_MAIN_GAME_SIZE = 124
 FONT_MAIN_BUTTONS_SIZE = 70
 FONT_HEADER_SIZE = 24
+FONT_TIMER_SIZE = 42
 INPUT_FONT_COLOR = (50, 255, 50)
 INPUT_BOX_HEIGHT = 40
 BACK_BTN_SIZE = (120, 60)
 TIMER_SIZE = (200, 75)
+CLOSE_BTN_SIZE = (50, 50)
 IMG_PATH = 'assets/images/'
 STATIC_IMG_PATH = 'static images/'
 OTHER_IMG_PATH = 'other images/'
@@ -64,6 +66,8 @@ board = [
     ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
     ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
 ]
+
+default_board = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
 HOST = '192.168.134.17'
 PORT = 14

@@ -96,6 +96,10 @@ try:
                     chess = Chessboard(screen)
 
         if chess is not None:
+            chess.decrease_timer()
+            if Common.go_next_waiting_loop:
+                chess.client.send('None'.encode('utf-8'))
+                chess.wait_next_move()
             chess.grand_update()
         clock.tick(FPS)
 except KeyboardInterrupt:

@@ -443,11 +443,6 @@ class GameModeChanger:
                     elif button.selection_group == 2:
                         Common.game_mode['time control'] = button.button_type
 
-                    print(button.button_type)
-
-                    for elem in Common.game_mode.keys():
-                        print(elem, ':', Common.game_mode[elem])
-
                 if button.button_type in ['BACK', 'START']:
                     with open('saved_info.json', 'r') as info:
                         all_info = json.load(info)
@@ -503,6 +498,7 @@ class Chessboard:
                  root_size: int = ROOT_SIZE):
         # Defining constants from the konfig or __init__ params
         Common.all_buttons.empty()
+        Common.all_dialogues.empty()
         self.__screen = parent_surface
         self.__count = root_count
         self.__board_data = board
@@ -512,6 +508,7 @@ class Chessboard:
         self.__chessboard_font_size = FONT_CHESSBOARD_SIZE
         self.__chessboard_font = pg.font.Font(FONT_CHESSBOARD_PATH, self.__chessboard_font_size)
         self.__text_font = pg.font.Font(FONT_TEXT_PATH, self.__input_box_font_size)
+        self.__timer_font = pg.font.Font(FONT_CHESSBOARD_PATH, FONT_TIMER_SIZE)
         self.__background = None
         self.__play_board_view = None
         self.__play_board_view_pos = None
@@ -531,6 +528,7 @@ class Chessboard:
         self.__chosen_new_piece = None
         self.__new_created_piece = None
         self.__all_possible_pieces = {}
+        self.__all_fen_positions = {}
         self.__pressed_input_box = None
         self.__pressed_root = None
         self.__released_root = None
@@ -544,24 +542,31 @@ class Chessboard:
         self.is_checked = False
         self.__turn = None
         self.__turn_increment_check = True
+        self.__do_cycling = True
         # Initialization methods
         pg.display.set_caption('Chess Session')
-        self.__start_time = datetime.datetime.now()
         time_control = Common.game_mode['time control']
         self.__game_mode = Common.game_mode['mode']
         self.__do_time_control = True if len(time_control) > 1 else False
         if self.__do_time_control:
             self.__time_control = int(time_control[:2]) * (1 if time_control[3:] == 'SEC' else 60)
+            self.__white_time = float(self.__time_control)
+            self.__black_time = float(self.__time_control)
         else:
             self.__time_control = None
+
         self.__prepare_screen()
         self.__draw_play_board()
 
         self.__draw_all_buttons()
+        if self.__game_mode != 'SANDBOX':
+            self.__input_box.text = default_board
         self.__setup_board_with_fen()
+        self.__reset_timer()
 
         self.__draw_waiting_window()
-        # self.__prepare_music()
+        if self.color == 'b':
+            self.wait_next_move()
         self.grand_update()
 
     def __play_move_sound(self):
@@ -585,15 +590,15 @@ class Chessboard:
 
     def __draw_waiting_window(self):
         if self.__game_mode == 'ONLINE':
-            client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
             waiting_window = DialogueWindow(self.__screen, 'waiting')
             Common.all_dialogues.add(waiting_window)
             self.grand_update()
 
-            client.connect((HOST, PORT))
-            print(clients_text := client.recv(1024).decode('utf-8'))
-            print(client.recv(1024).decode('utf-8'))
+            self.client.connect((HOST, PORT))
+            print(clients_text := self.client.recv(1024).decode('utf-8'))
+            print(self.client.recv(1024).decode('utf-8'))
             Common.all_dialogues.empty()
             self.color = clients_text[-5]
         elif self.__game_mode == 'BOT':
@@ -634,16 +639,96 @@ class Chessboard:
 
     def __draw_timer(self):
         if self.__do_time_control:
-            white_timer = black_timer = pg.Surface(TIMER_SIZE).convert_alpha()
+            white_timer = pg.Surface(TIMER_SIZE).convert_alpha()
+            black_timer = pg.Surface(TIMER_SIZE).convert_alpha()
             black_timer.fill(Common.MAIN_STROKE_COLOR)
             white_timer.fill(Common.MAIN_STROKE_COLOR)
-            black_time_value = str(self.__start_time + datetime.timedelta(seconds=self.__time_control) -
-                                   datetime.datetime.now())[2:9]
-            black_time = self.__chessboard_font.render(black_time_value, True,
-                                                       Common.BOARD_TEXT_COLOR)
-            black_timer.blit(black_time, (0, 0))
-            self.__screen.blit(black_timer, self.__black_timer_pos)
+
+            if self.__white_time <= 0:
+                self.__white_time = 0
+                self.__turn = '-'
+                if not Common.game_ended:
+                    win = DialogueWindow(self.__screen, 'b by time')
+                    Common.all_dialogues.add(win)
+                Common.game_ended = True
+            elif self.__black_time <= 0:
+                self.__black_time = 0
+                self.__turn = '-'
+                if not Common.game_ended:
+                    win = DialogueWindow(self.__screen, 'w by time')
+                    Common.all_dialogues.add(win)
+                Common.game_ended = True
+
+            new_times = [None, None]
+            for time_index, time_value in enumerate((self.__white_time, self.__black_time)):
+                old_time_value = time_value
+                minutes = 0
+                while time_value >= 60:
+                    time_value -= 60
+                    minutes += 1
+                string_time_val = str(time_value).replace('.', '')
+                time_to_draw = f'{minutes}:{string_time_val[:2]}'
+                if old_time_value < 10:
+                    do_sort = False
+                    for num in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
+                        if num in string_time_val:
+                            do_sort = True
+                            break
+                    if do_sort:
+                        time_to_draw = list(time_to_draw)
+                        time_to_draw.insert(2, '0')
+                        time_to_draw.insert(4, '.')
+                        time_to_draw.insert(5, string_time_val[1])
+                        time_to_draw[6] = string_time_val[2]
+                        new_time_to_draw = ''
+                        for char in time_to_draw:
+                            new_time_to_draw += char
+                        time_to_draw = new_time_to_draw
+                    else:
+                        time_to_draw = '0:00.00'
+                elif old_time_value < 60:
+                    time_to_draw += f'.{string_time_val[2:3]}'
+                new_times[time_index] = time_to_draw
+
+            white_time_value = self.__timer_font.render(new_times[0], True,
+                                                        Common.MAIN_COLOR if self.__turn == 'w'
+                                                        else Common.BACKGROUND)
+            black_time_value = self.__timer_font.render(new_times[1], True,
+                                                        Common.MAIN_COLOR if self.__turn == 'b'
+                                                        else Common.BACKGROUND)
+            white_timer.blit(white_time_value,
+                             (TIMER_SIZE[0] // 2 - white_time_value.get_width() // 2,
+                              TIMER_SIZE[1] // 2 - white_time_value.get_height() // 2))
+            black_timer.blit(black_time_value,
+                             (TIMER_SIZE[0] // 2 - black_time_value.get_width() // 2,
+                              TIMER_SIZE[1] // 2 - black_time_value.get_height() // 2))
+
             self.__screen.blit(white_timer, self.__white_timer_pos)
+            self.__screen.blit(black_timer, self.__black_timer_pos)
+
+
+
+    def decrease_timer(self):
+        if self.__do_time_control and not Common.game_ended:
+            #print(self.__turn, self.color, self.__white_time, self.__black_time)
+            if self.__turn == 'w':
+                self.__white_time -= 0.016666666667
+            elif self.__turn == 'b':
+                self.__black_time -= 0.016666666667
+
+    def __reset_timer(self):
+        if self.__do_time_control:
+            old = datetime.datetime.now()
+            self.__turn = '-'
+            self.__white_time = float(self.__time_control)
+            self.__black_time = float(self.__time_control)
+            self.grand_update()
+            if self.__do_cycling:
+                while True:
+                    if (datetime.datetime.now() - old).total_seconds() > 1:
+                        self.__turn = 'w'
+                        break
+            self.__do_cycling = False
 
     def __draw_input_box(self, board_rect: pg.Rect):
         """Draws input box in the bottom"""
@@ -897,12 +982,15 @@ class Chessboard:
         """Returns the clicked piece"""
         for piece in Common.all_pieces:
             if piece.root_name[1] == root.root_name[1]:
-                if piece.color == self.__turn and piece.color in self.color:
-                    if self.__taken_piece is None:
+                if self.__game_mode != 'SANDBOX':
+                    if piece.color == self.__turn == self.color:
+                        if self.__taken_piece is not None:
+                            self.__taken_piece.move_to_root(self.__pressed_root)
                         return piece
-                    else:
+                else:
+                    if self.__taken_piece is not None:
                         self.__taken_piece.move_to_root(self.__pressed_root)
-                        return piece
+                    return piece
         return None
 
     def __get_piece_pos_by_name(self, name):
@@ -956,7 +1044,8 @@ class Chessboard:
                 elif button.button_type == 'COPY':
                     copy_to_buffer(self.__input_box)
                 elif button.button_type == 'RESET':
-                    self.__input_box.text = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+                    self.__all_fen_positions = {}
+                    self.__input_box.text = default_board
                     self.__input_box.put_char('')
                     self.__setup_board_with_fen()
                     with open('saved_info.json', 'r') as info:
@@ -964,6 +1053,11 @@ class Chessboard:
                     with open('saved_info.json', 'w') as info:
                         all_info['fen string'] = self.__input_box.text
                         json.dump(all_info, info)
+                    self.__do_cycling = True
+                    self.__reset_timer()
+                elif button.button_type == 'X':
+                    Common.all_dialogues.empty()
+                    button.kill()
                 elif button.button_type == 'BACK':
                     self.back = True
         self.__pressed_input_box = self.__get_input_box(pos)
@@ -1112,19 +1206,20 @@ class Chessboard:
         self.__all_selects.add(select)
 
     def __draw_available_roots(self, piece: Piece):
-        piece.check_movables(True)
-        for available in piece.movable_roots:
-            moving_dist = (available[0], available[1])
-            for root in Common.all_roots:
-                if root.root_name[1] == moving_dist:
-                    available_root = Mark(root, 'available')
-                    Common.all_marks.add(available_root)
-        for takeable in piece.takeable_roots:
-            moving_dist = (takeable[0], takeable[1])
-            for root in Common.all_roots:
-                if root.root_name[1] == moving_dist:
-                    takeable_root = Mark(root, 'takeable')
-                    Common.all_marks.add(takeable_root)
+        if not Common.game_ended or self.__game_mode == 'SANDBOX':
+            piece.check_movables(True)
+            for available in piece.movable_roots:
+                moving_dist = (available[0], available[1])
+                for root in Common.all_roots:
+                    if root.root_name[1] == moving_dist:
+                        available_root = Mark(root, 'available')
+                        Common.all_marks.add(available_root)
+            for takeable in piece.takeable_roots:
+                moving_dist = (takeable[0], takeable[1])
+                for root in Common.all_roots:
+                    if root.root_name[1] == moving_dist:
+                        takeable_root = Mark(root, 'takeable')
+                        Common.all_marks.add(takeable_root)
 
     def __move_or_select_piece(self, root):
         self.__unselect_all_roots()
@@ -1182,12 +1277,14 @@ class Chessboard:
 
         self.__write_fen_from_board()
 
-    def __after_move_preps(self, piece, root):
+    def __after_move_preps(self, piece):
         self.__unmark_all_marks()
         Common.other_map[2] = '-'
 
         if piece.piece_name in ['p', 'P']:
             self.__pawns_after_move_logic(piece)
+        else:
+            self.__increase_50_rule()
 
         if piece.piece_name in ['k', 'K']:
             self.__kings_after_move_logic(piece)
@@ -1208,8 +1305,44 @@ class Chessboard:
         if self.__turn_increment_check:
             Common.other_map[4] += 1
         self.__write_to_board_data()
+        self.__record_fen()
+        self.__check_draw()
+        if self.__game_mode != 'SANDBOX':
+            if piece.color == self.color:
+                self.__send_to_opponent()
+                self.wait_next_move()
+
+    def __send_to_opponent(self):
+        if self.__game_mode == 'ONLINE':
+            time_to_send = self.__white_time if self.color == 'w' else self.__black_time
+            self.client.send((str(time_to_send) + '|' + self.__input_box.text).encode('utf-8'))
+
+    def wait_next_move(self):
+        if self.__game_mode == 'ONLINE':
+            rec_data = self.client.recv(1024).decode('utf-8').split('|')
+            if rec_data != 'None':
+                self.client.send('received'.encode('utf-8'))
+                Common.go_next_waiting_loop = False
+                (self.__white_time if self.color == 'b' else self.__black_time) = rec_data[0]
+                self.__input_box.text = rec_data[1]
+                self.__setup_board_with_fen()
+            else:
+
+                Common.go_next_waiting_loop = True
+
+    def __record_fen(self):
+        whitespace = self.__input_box.text.index(' ')
+        fen = self.__input_box.text[:whitespace]
+        if fen in self.__all_fen_positions.keys():
+            self.__all_fen_positions[fen] += 1
+        else:
+            self.__all_fen_positions[fen] = 1
+        print('')
+        for position in self.__all_fen_positions:
+            print(f'{position}: {self.__all_fen_positions[position]}')
 
     def __pawns_after_move_logic(self, pawn: Pawn):
+        Common.other_map[3] = 0
         if pawn.root_name[1] == pawn.taking_on_the_pass_move:
             self.kill_piece(self.__get_piece_by_piece_pos(pawn.passing_pawn_pos))
         if pawn.first_move and pawn.root_name[1][1] - pawn.prev_root_name[1][1] in [2, -2]:
@@ -1221,6 +1354,12 @@ class Chessboard:
             self.__choosing_pawn = pawn
         pawn.taking_on_the_pass_move = None
         pawn.passing_pawn_pos = None
+
+    def __increase_50_rule(self):
+        if not self.is_piece_killed:
+            Common.other_map[3] += 1
+        else:
+            Common.other_map[3] = 0
 
     def __kings_after_move_logic(self, king: King):
         king.is_long_castling_possible = False
@@ -1295,12 +1434,30 @@ class Chessboard:
                 if prob_king.piece_name == ('K' if color == 'b' else 'k'):
                     if not prob_king.is_checked:
                         print('Stalemate')
+                        stalemate = DialogueWindow(self.__screen, 'stalemate')
+                        Common.all_dialogues.add(stalemate)
+                        Common.game_ended = True
                     else:
                         print('Mate for ' + ('white' if prob_king.piece_name == 'K' else 'black'))
-                    winlose = DialogueWindow(self.__screen, 'winin')
-                    Common.all_dialogues.add(winlose)
+                        win = DialogueWindow(self.__screen, 'w by mate' if prob_king.piece_name == 'k'
+                                             else 'b by mate')
+                        Common.all_dialogues.add(win)
+                        Common.game_ended = True
             return True
         return False
+
+    def __check_draw(self):
+        for position in self.__all_fen_positions:
+            if self.__all_fen_positions[position] == 3:
+                draw = DialogueWindow(self.__screen, 'rep')
+                Common.all_dialogues.add(draw)
+                Common.game_ended = True
+                break
+
+        if Common.other_map[3] >= 50:
+            draw = DialogueWindow(self.__screen, '50')
+            Common.all_dialogues.add(draw)
+            Common.game_ended = True
 
     def __change_turn(self):
         self.__turn = 'w' if self.__turn == 'b' else 'b'
@@ -1323,15 +1480,15 @@ class Chessboard:
         self.__screen.blit(self.__play_board_view, self.__play_board_view_pos)
         Common.all_roots.draw(self.__screen)
         Common.all_input_boxes.draw(self.__screen)
-        Common.all_buttons.draw(self.__screen)
         self.__all_selects.draw(self.__screen)
         self.__all_checks.draw(self.__screen)
         Common.all_marks.draw(self.__screen)
         Common.all_pieces.draw(self.__screen)
-        self.__draw_timer()
-        Common.all_dialogues.draw(self.__screen)
         Common.all_choosing_cells.draw(self.__screen)
         Common.all_choosing_pieces.draw(self.__screen)
+        self.__draw_timer()
+        Common.all_dialogues.draw(self.__screen)
+        Common.all_buttons.draw(self.__screen)
         pg.display.update()
 
 
@@ -1508,6 +1665,29 @@ class DialogueWindow(pg.sprite.Sprite):
                             (self.image.get_rect().width, self.image.get_rect().height))
         self.font = pg.font.Font(FONT_CHESSBOARD_PATH, FONT_HEADER_SIZE)
         if dialogue_type == 'waiting':
-            waiting_text = self.font.render('Waiting for an opponent', True, Common.MAIN_STROKE_COLOR)
-            self.image.blit(waiting_text, (self.image.get_width() // 2 - waiting_text.get_width() // 2,
-                                           self.image.get_height() // 2 - waiting_text.get_height() // 2))
+            text = self.font.render('Waiting for an opponent', True, Common.MAIN_STROKE_COLOR)
+        elif dialogue_type == 'w by time':
+            text = self.font.render('White won by time', True, Common.MAIN_STROKE_COLOR)
+        elif dialogue_type == 'b by time':
+            text = self.font.render('Black won by time', True, Common.MAIN_STROKE_COLOR)
+        elif dialogue_type == 'w by mate':
+            text = self.font.render('White won by checkmate', True, Common.MAIN_STROKE_COLOR)
+        elif dialogue_type == 'b by mate':
+            text = self.font.render('Black won by checkmate', True, Common.MAIN_STROKE_COLOR)
+        elif dialogue_type == 'stalemate':
+            text = self.font.render('Stalemate', True, Common.MAIN_STROKE_COLOR)
+        elif dialogue_type == 'rep':
+            text = self.font.render('Draw by repeating moves', True, Common.MAIN_STROKE_COLOR)
+        elif dialogue_type == '50':
+            text = self.font.render('Draw by the 50 turns rule', True, Common.MAIN_STROKE_COLOR)
+        else:
+            text = self.font.render('LOL', True, Common.MAIN_STROKE_COLOR)
+
+        if dialogue_type not in ['waiting']:
+            close_btn = Button('X', (self.rect.x + self.image.get_width() - CLOSE_BTN_SIZE[0] - 3,
+                                     self.rect.y + 3),
+                                CLOSE_BTN_SIZE, 42, 1)
+            Common.all_buttons.add(close_btn)
+
+        self.image.blit(text, (self.image.get_width() // 2 - text.get_width() // 2,
+                               self.image.get_height() // 2 - text.get_height() // 2))

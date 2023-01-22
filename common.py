@@ -5,6 +5,8 @@ from konfig import *
 class Common:
     mode = None
     is_flipped = False
+    game_ended = False
+    go_next_waiting_loop = False
     all_pieces = pg.sprite.Group()
     all_roots = pg.sprite.Group()
     all_marks = pg.sprite.Group()

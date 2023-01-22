@@ -562,9 +562,10 @@ class Chessboard:
         if self.__game_mode != 'SANDBOX':
             self.__input_box.text = default_board
         self.__setup_board_with_fen()
-        self.__reset_timer()
 
         self.__draw_waiting_window()
+        self.__reset_timer()
+
         if self.color == 'b':
             self.wait_next_move()
         self.grand_update()

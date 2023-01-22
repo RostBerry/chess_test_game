@@ -1367,7 +1367,7 @@ class Chessboard:
 
     def __increase_50_rule(self):
         if not self.is_piece_killed:
-            Common.other_map[3] = int(Common.other_map[3] + 1)
+            Common.other_map[3] = int(Common.other_map[3]) + 1
         else:
             Common.other_map[3] = 0
 

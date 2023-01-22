@@ -19,6 +19,7 @@ user1.send('Both players connected')
 user2.send('Both players connected')
 
 while True:
-    rec_data = user1.recv(1024)
-    user2.send(rec_data)
-
+    rec_data1 = user1.recv(1024)
+    user2.send(rec_data1)
+    rec_data2 = user2.recv(1024)
+    user1.send(rec_data2)

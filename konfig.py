@@ -69,5 +69,5 @@ board = [
 
 default_board = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
 
-HOST = '192.168.1.85'
+HOST = '192.168.134.17'
 PORT = 14
